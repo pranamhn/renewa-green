@@ -39,7 +39,7 @@ export default function RoadmapSection() {
           <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(28px, 4vw, 40px)", color: "#fff", letterSpacing: -1 }}>
             Journey to <span style={{ color: "#B8F53A" }}>2035</span>
           </h2>
-          <Link href="/vision-2030" style={{ fontSize: 13, color: "#B8F53A", textDecoration: "none" }}>{t.cta}</Link>
+          <Link href="/vision-2035" style={{ fontSize: 13, color: "#B8F53A", textDecoration: "none" }}>{t.cta}</Link>
         </div>
 
         <div style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "40px 32px" }}>

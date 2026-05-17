@@ -17,7 +17,7 @@ export default function Footer() {
       title: "Company",
       links: [
         { href: "/about", label: "About Renewa" },
-        { href: "/vision-2030", label: "Vision 2035" },
+        { href: "/vision-2035", label: "Vision 2035" },
         { href: "/news", label: "News & Insights" },
         { href: "/careers", label: "Careers" },
       ],

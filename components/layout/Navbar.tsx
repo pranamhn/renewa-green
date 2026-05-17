@@ -12,7 +12,7 @@ const businessLinks = [
 ];
 
 const navLinks = [
-  { href: "/vision-2030", label: "Vision 2035" },
+  { href: "/vision-2035", label: "Vision 2035" },
   { href: "/#impact", label: "Impact" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
@@ -121,7 +121,7 @@ export default function Navbar() {
 
       {mobileOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 40, background: "#0B0F0E", display: "flex", flexDirection: "column", padding: "88px 24px 40px" }}>
-          {[{ href: "/", label: "Beranda" }, ...businessLinks.map(l => ({ href: l.href, label: l.label })), { href: "/vision-2030", label: "Vision 2035" }, { href: "/about", label: "About" }, { href: "/contact", label: "Contact" }].map((l) => (
+          {[{ href: "/", label: "Beranda" }, ...businessLinks.map(l => ({ href: l.href, label: l.label })), { href: "/vision-2035", label: "Vision 2035" }, { href: "/about", label: "About" }, { href: "/contact", label: "Contact" }].map((l) => (
             <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
               style={{ padding: "18px 0", fontSize: 22, fontFamily: "Syne, sans-serif", fontWeight: 700, color: "#fff", textDecoration: "none", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
               {l.label}
