@@ -4,19 +4,36 @@ import Link from "next/link";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { useLang, useSetLang } from "@/context/LanguageContext";
 
-const businessLinks = [
-  { href: "/business/credit-connect", label: "Credit Connect", desc: "Kredit EV untuk end user" },
-  { href: "/business/credit-trading", label: "Credit Trading", desc: "Carbon credit dari EV mobility" },
-  { href: "/business/recycling", label: "EV Battery Recycling", desc: "Daur ulang baterai EV" },
-  { href: "/business/green-energy", label: "Green Energy", desc: "Solar, Geothermal & PLTSa" },
-];
-
-const navLinks = [
-  { href: "/vision-2035", label: "Vision 2035" },
-  { href: "/#impact", label: "Impact" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-];
+const dict = {
+  id: {
+    home: "Beranda",
+    business: "Bisnis",
+    vision: "Visi 2035",
+    partner: "Investors",
+    about: "Tentang",
+    contact: "Kontak",
+    bizLinks: [
+      { href: "/business/credit-connect",  label: "Credit Connect",      desc: "Kredit EV untuk pengguna akhir" },
+      { href: "/business/credit-trading",  label: "Credit Trading",       desc: "Carbon credit dari mobilitas EV" },
+      { href: "/business/recycling",       label: "EV Battery Recycling", desc: "Daur ulang baterai EV" },
+      { href: "/business/green-energy",    label: "Green Energy",         desc: "Solar, Geotermal & PLTSa" },
+    ],
+  },
+  en: {
+    home: "Home",
+    business: "Business",
+    vision: "Vision 2035",
+    partner: "Investors",
+    about: "About",
+    contact: "Contact",
+    bizLinks: [
+      { href: "/business/credit-connect",  label: "Credit Connect",      desc: "EV credit for end users" },
+      { href: "/business/credit-trading",  label: "Credit Trading",       desc: "Carbon credit from EV mobility" },
+      { href: "/business/recycling",       label: "EV Battery Recycling", desc: "Recycling used EV batteries" },
+      { href: "/business/green-energy",    label: "Green Energy",         desc: "Solar, Geothermal & PLTSa" },
+    ],
+  },
+};
 
 const linkStyle = { fontSize: 15, fontWeight: 700, color: "#7A9E85", textDecoration: "none", transition: "color 0.15s" } as const;
 
@@ -26,12 +43,22 @@ export default function Navbar() {
   const [bizOpen, setBizOpen] = useState(false);
   const lang = useLang();
   const setLang = useSetLang();
+  const t = dict[lang];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const mobileLinks = [
+    { href: "/",                   label: t.home },
+    ...t.bizLinks.map(l => ({ href: l.href, label: l.label })),
+    { href: "/vision-2035",        label: t.vision },
+    { href: "/investor-partner",   label: t.partner },
+    { href: "/about",              label: t.about },
+    { href: "/contact",            label: t.contact },
+  ];
 
   return (
     <>
@@ -49,11 +76,10 @@ export default function Navbar() {
           </Link>
 
           <div style={{ display: "flex", alignItems: "center", gap: 32 }} className="hidden lg:flex">
-            {/* Beranda */}
             <Link href="/" style={linkStyle}
               onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
               onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
-              Beranda
+              {t.home}
             </Link>
 
             {/* Business dropdown */}
@@ -63,12 +89,12 @@ export default function Navbar() {
                 onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
                 onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}
               >
-                Business <ChevronDown size={13} style={{ transform: bizOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+                {t.business} <ChevronDown size={13} style={{ transform: bizOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
               </button>
               {bizOpen && (
                 <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 260, paddingTop: 12, zIndex: 100 }}>
                   <div style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
-                    {businessLinks.map((l) => (
+                    {t.bizLinks.map((l) => (
                       <Link key={l.href} href={l.href} style={{ display: "flex", flexDirection: "column", gap: 2, padding: "14px 20px", textDecoration: "none", borderBottom: "0.5px solid rgba(255,255,255,0.05)", transition: "background 0.15s" }}
                         onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
                         onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}>
@@ -81,14 +107,26 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Other links */}
-            {navLinks.map((l) => (
-              <Link key={l.href} href={l.href} style={linkStyle}
-                onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
-                onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
-                {l.label}
-              </Link>
-            ))}
+            <Link href="/vision-2035" style={linkStyle}
+              onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
+              onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
+              {t.vision}
+            </Link>
+            <Link href="/investor-partner" style={linkStyle}
+              onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
+              onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
+              {t.partner}
+            </Link>
+            <Link href="/about" style={linkStyle}
+              onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
+              onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
+              {t.about}
+            </Link>
+            <Link href="/contact" style={linkStyle}
+              onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
+              onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
+              {t.contact}
+            </Link>
           </div>
 
           {/* Language toggle */}
@@ -119,14 +157,35 @@ export default function Navbar() {
         </div>
       </nav>
 
+      {/* Mobile menu */}
       {mobileOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 40, background: "#0B0F0E", display: "flex", flexDirection: "column", padding: "88px 24px 40px" }}>
-          {[{ href: "/", label: "Beranda" }, ...businessLinks.map(l => ({ href: l.href, label: l.label })), { href: "/vision-2035", label: "Vision 2035" }, { href: "/about", label: "About" }, { href: "/contact", label: "Contact" }].map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
+        <div style={{ position: "fixed", inset: 0, zIndex: 40, background: "#0B0F0E", display: "flex", flexDirection: "column", padding: "88px 24px 40px", overflowY: "auto" }}>
+          {mobileLinks.map((l) => (
+            <Link key={l.href + l.label} href={l.href} onClick={() => setMobileOpen(false)}
               style={{ padding: "18px 0", fontSize: 22, fontFamily: "Syne, sans-serif", fontWeight: 700, color: "#fff", textDecoration: "none", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
               {l.label}
             </Link>
           ))}
+          {/* Language toggle in mobile */}
+          <div style={{ marginTop: 32, display: "flex", gap: 8 }}>
+            {(["id", "en"] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => { setLang(l); setMobileOpen(false); }}
+                style={{
+                  padding: "10px 24px", borderRadius: 8, fontSize: 13,
+                  fontFamily: "JetBrains Mono, monospace", fontWeight: 700,
+                  letterSpacing: "1px", textTransform: "uppercase",
+                  border: "0.5px solid rgba(255,255,255,0.12)", cursor: "pointer",
+                  background: lang === l ? "#B8F53A" : "rgba(255,255,255,0.04)",
+                  color: lang === l ? "#0D2B1E" : "#7A9E85",
+                  transition: "all 0.15s",
+                }}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </>

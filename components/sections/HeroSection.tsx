@@ -6,9 +6,12 @@ import { useLang } from "@/context/LanguageContext";
 
 const dict = {
   id: {
+    h1a: "Perbarui Masa Depan.",
+    h1b: "Tenagakan Bangsa.",
     desc: "Ekosistem bisnis hijau terintegrasi — dari kredit EV hingga energi terbarukan. Satu platform, satu misi: Indonesia yang lebih bersih dan berkelanjutan.",
-    cta1: "Explore Business",
-    cta2: "Vision 2035 →",
+    cta1: "Jelajahi Bisnis",
+    cta2: "Visi 2035 →",
+    scroll: "Gulir",
     stats: [
       { num: "100K", label: "Target Unit EV 2035", sub: "Credit Connect" },
       { num: "4", label: "Pilar Bisnis Hijau", sub: "Terintegrasi" },
@@ -16,9 +19,12 @@ const dict = {
     ],
   },
   en: {
+    h1a: "Renew the Future.",
+    h1b: "Power the Nation.",
     desc: "An integrated green business ecosystem — from EV credit to renewable energy. One platform, one mission: a cleaner, more sustainable Indonesia.",
     cta1: "Explore Business",
     cta2: "Vision 2035 →",
+    scroll: "Scroll",
     stats: [
       { num: "100K", label: "EV Unit Target 2035", sub: "Credit Connect" },
       { num: "4", label: "Green Business Pillars", sub: "Integrated" },
@@ -58,8 +64,8 @@ export default function HeroSection() {
         </div>
 
         <h1 ref={h1Ref} style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(44px, 7vw, 80px)", lineHeight: 1.02, letterSpacing: "-3px", color: "#fff", marginBottom: 24, maxWidth: 720 }}>
-          Renew the Future.<br />
-          <span style={{ color: "#B8F53A" }}>Power the Nation.</span>
+          {t.h1a}<br />
+          <span style={{ color: "#B8F53A" }}>{t.h1b}</span>
         </h1>
 
         <p style={{ fontSize: 17, color: "#7A9E85", lineHeight: 1.75, maxWidth: 520, marginBottom: 40, fontWeight: 300 }}>
@@ -93,7 +99,7 @@ export default function HeroSection() {
       </div>
 
       <div style={{ position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, animation: "fadeUp 1s ease 1s forwards", opacity: 0 }}>
-        <span style={{ fontSize: 10, color: "#7A9E85", letterSpacing: "2px", textTransform: "uppercase" }}>Scroll</span>
+        <span style={{ fontSize: 10, color: "#7A9E85", letterSpacing: "2px", textTransform: "uppercase" }}>{t.scroll}</span>
         <ArrowDown size={14} color="#7A9E85" />
       </div>
     </section>

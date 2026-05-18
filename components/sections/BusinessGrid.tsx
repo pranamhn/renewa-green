@@ -43,8 +43,8 @@ const units = [
 ];
 
 const dict = {
-  id: { h2: "Empat Pilar Bisnis Hijau" },
-  en: { h2: "Four Pillars of Green Business" },
+  id: { label: "Unit Bisnis", h2: "Empat Pilar" },
+  en: { label: "Business Units", h2: "Four Pillars of" },
 };
 
 export default function BusinessGrid() {
@@ -60,9 +60,9 @@ export default function BusinessGrid() {
         .biz-card:hover .accent-bar { transform: scaleX(1); }
       `}</style>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <SectionLabel text="Business Units" />
+        <SectionLabel text={t.label} />
         <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(28px, 4vw, 40px)", color: "#fff", letterSpacing: -1, marginBottom: 48, maxWidth: 480 }}>
-          {t.h2} <span style={{ color: "#B8F53A" }}></span>
+          {t.h2} <span style={{ color: "#B8F53A" }}>{lang === "id" ? "Bisnis Hijau" : "Green Business"}</span>
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
           {units.map((u) => (
