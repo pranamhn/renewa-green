@@ -12,7 +12,6 @@ const dict = {
     h1a: "Daftarkan",
     h1b: "Produk Anda",
     desc: "Jadilah bagian dari rantai pasokan ekosistem EV & energi hijau terbesar di Indonesia. Kami mencari mitra pemasok terpercaya di semua kategori produk.",
-    backLabel: "← Kembali ke Investor & Partner",
     leftTitle: "Proses Pendaftaran",
     steps: [
       { title: "Isi Formulir", desc: "Lengkapi data perusahaan dan informasi produk yang akan Anda tawarkan." },
@@ -75,7 +74,6 @@ const dict = {
     h1a: "Register",
     h1b: "Your Product",
     desc: "Become part of the supply chain for Indonesia's largest EV & green energy ecosystem. We're looking for trusted supply partners across all product categories.",
-    backLabel: "← Back to Investor & Partner",
     leftTitle: "Registration Process",
     steps: [
       { title: "Fill the Form", desc: "Complete your company details and information about the products you want to offer." },
@@ -179,7 +177,7 @@ export default function RegisterProduct() {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setTimeout(() => {
@@ -197,11 +195,6 @@ export default function RegisterProduct() {
         {/* Hero */}
         <section style={{ padding: "72px 40px 56px", background: "#000", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-            <Link href="/investor-partner" style={{ fontSize: 13, color: "#7A9E85", textDecoration: "none", display: "inline-block", marginBottom: 28 }}
-              onMouseOver={e => (e.currentTarget.style.color = "#B8F53A")}
-              onMouseOut={e => (e.currentTarget.style.color = "#7A9E85")}>
-              {t.backLabel}
-            </Link>
             <SectionLabel text={t.label} />
             <h1 style={{
               fontFamily: "Syne, sans-serif", fontWeight: 800,

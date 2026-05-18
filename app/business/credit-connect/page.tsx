@@ -57,7 +57,7 @@ export default function CreditConnect() {
             <p style={{ fontSize: 17, color: "#7A9E85", lineHeight: 1.75, maxWidth: 560, marginTop: 20, marginBottom: 40, fontWeight: 300 }}>
               {t.heroDesc}
             </p>
-            <Link href="/apply-ev-credit" style={{ padding: "14px 28px", borderRadius: 8, fontSize: 14, fontWeight: 500, background: "#B8F53A", color: "#0D2B1E", textDecoration: "none", display: "inline-block" }}>
+            <Link href="/business/credit-connect/apply-ev-credit" style={{ padding: "14px 28px", borderRadius: 8, fontSize: 14, fontWeight: 500, background: "#B8F53A", color: "#0D2B1E", textDecoration: "none", display: "inline-block" }}>
               {t.heroCta}
             </Link>
           </div>

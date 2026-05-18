@@ -8,8 +8,8 @@ const dict = {
   id: {
     home: "Beranda",
     business: "Bisnis",
-    vision: "Visi 2035",
     partner: "Investors",
+    vision: "Visi 2035",
     about: "Tentang",
     contact: "Kontak",
     bizLinks: [
@@ -20,16 +20,16 @@ const dict = {
     ],
     partnerLinks: [
       { href: "/investor-partner",    label: "Overview",              desc: "Semua jalur kolaborasi Renewa" },
-      { href: "/schedule-meeting",    label: "Jadwalkan Pertemuan",   desc: "Diskusi investasi dengan tim kami" },
-      { href: "/register-product",    label: "Daftarkan Produk",      desc: "Bergabung sebagai mitra supplier" },
-      { href: "/apply-partnership",   label: "Ajukan Kemitraan",      desc: "Deploy armada EV untuk bisnis Anda" },
+      { href: "/investor-partner/schedule-meeting",    label: "Jadwalkan Pertemuan",   desc: "Diskusi investasi dengan tim kami" },
+      { href: "/investor-partner/register-product",    label: "Daftarkan Produk",      desc: "Bergabung sebagai mitra supplier" },
+      { href: "/investor-partner/apply-partnership",   label: "Ajukan Kemitraan",      desc: "Deploy armada EV untuk bisnis Anda" },
     ],
   },
   en: {
     home: "Home",
     business: "Business",
-    vision: "Vision 2035",
     partner: "Investors",
+    vision: "Vision 2035",
     about: "About",
     contact: "Contact",
     bizLinks: [
@@ -40,9 +40,9 @@ const dict = {
     ],
     partnerLinks: [
       { href: "/investor-partner",    label: "Overview",              desc: "All Renewa collaboration paths" },
-      { href: "/schedule-meeting",    label: "Schedule a Meeting",    desc: "Investment discussion with our team" },
-      { href: "/register-product",    label: "Register Product",      desc: "Join as a supplier partner" },
-      { href: "/apply-partnership",   label: "Apply for Partnership", desc: "Deploy an EV fleet for your business" },
+      { href: "/investor-partner/schedule-meeting",    label: "Schedule a Meeting",    desc: "Investment discussion with our team" },
+      { href: "/investor-partner/register-product",    label: "Register Product",      desc: "Join as a supplier partner" },
+      { href: "/investor-partner/apply-partnership",   label: "Apply for Partnership", desc: "Deploy an EV fleet for your business" },
     ],
   },
 };
@@ -67,8 +67,8 @@ export default function Navbar() {
   const mobileLinks = [
     { href: "/",                   label: t.home },
     ...t.bizLinks.map(l => ({ href: l.href, label: l.label })),
-    { href: "/vision-2035",        label: t.vision },
     ...t.partnerLinks.map(l => ({ href: l.href, label: l.label })),
+    { href: "/vision-2035",        label: t.vision },
     { href: "/about",              label: t.about },
     { href: "/contact",            label: t.contact },
   ];
@@ -120,11 +120,6 @@ export default function Navbar() {
               )}
             </div>
 
-            <Link href="/vision-2035" style={linkStyle}
-              onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
-              onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
-              {t.vision}
-            </Link>
             {/* Investors dropdown */}
             <div style={{ position: "relative" }} onMouseEnter={() => setPartnerOpen(true)} onMouseLeave={() => setPartnerOpen(false)}>
               <button
@@ -149,6 +144,11 @@ export default function Navbar() {
                 </div>
               )}
             </div>
+            <Link href="/vision-2035" style={linkStyle}
+              onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
+              onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
+              {t.vision}
+            </Link>
             <Link href="/about" style={linkStyle}
               onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
               onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
