@@ -5,18 +5,26 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "db:migrate":          "sequelize-cli db:migrate",
+    "db:migrate:undo":     "sequelize-cli db:migrate:undo",
+    "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
+    "db:status":           "sequelize-cli db:migrate:status"
   },
   "dependencies": {
     "@types/recharts": "^1.8.29",
+    "dotenv": "^16.4.5",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.16.0",
+    "mysql2": "^3.11.3",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "sequelize": "^6.37.3"
   },
   "devDependencies": {
+    "sequelize-cli": "^6.6.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

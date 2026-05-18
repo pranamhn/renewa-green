@@ -61,8 +61,8 @@ export default function CreditTrading() {
               {t.heroDesc}
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <Link href="/contact?cat=carbon" style={{ padding: "14px 28px", borderRadius: 8, fontSize: 14, fontWeight: 500, background: "#B8F53A", color: "#0D2B1E", textDecoration: "none" }}>{t.cta1}</Link>
-              <Link href="/contact?cat=rider" style={{ padding: "14px 28px", borderRadius: 8, fontSize: 14, fontWeight: 400, background: "transparent", color: "#F2F5EF", textDecoration: "none", border: "0.5px solid rgba(255,255,255,0.2)" }}>{t.cta2}</Link>
+              <Link href="/buy-carbon-credit" style={{ padding: "14px 28px", borderRadius: 8, fontSize: 14, fontWeight: 500, background: "#B8F53A", color: "#0D2B1E", textDecoration: "none" }}>{t.cta1}</Link>
+              <Link href="/register-vehicle" style={{ padding: "14px 28px", borderRadius: 8, fontSize: 14, fontWeight: 400, background: "transparent", color: "#F2F5EF", textDecoration: "none", border: "0.5px solid rgba(255,255,255,0.2)" }}>{t.cta2}</Link>
             </div>
           </div>
         </section>

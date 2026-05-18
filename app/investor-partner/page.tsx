@@ -39,7 +39,7 @@ const dict = {
       forLabel: "Cocok untuk",
       forTags: ["Angel Investor", "Venture Capital", "Family Office", "ESG Fund", "Institusi Keuangan", "Impact Investor"],
       cta: "Jadwalkan Pertemuan",
-      ctaHref: "/contact",
+      ctaHref: "/schedule-meeting",
     },
 
     supplier: {
@@ -67,7 +67,7 @@ const dict = {
       forLabel: "Cocok untuk",
       forTags: ["Produsen Motor EV", "Distributor Baterai", "Penyedia SPKLU", "Produsen Panel Surya", "Perusahaan Recycling", "Importir Teknologi Hijau"],
       cta: "Daftarkan Produk",
-      ctaHref: "/contact",
+      ctaHref: "/register-product",
     },
 
     recipient: {
@@ -95,7 +95,7 @@ const dict = {
       forLabel: "Syarat Minimum",
       forTags: ["Min. 10 Unit", "Domisili Indonesia", "Memiliki NPWP", "Operasional Aktif"],
       cta: "Ajukan Kemitraan",
-      ctaHref: "/apply-ev-credit",
+      ctaHref: "/apply-partnership",
     },
 
     ctaTitle: "Siap Bergabung?",
@@ -136,7 +136,7 @@ const dict = {
       forLabel: "Ideal for",
       forTags: ["Angel Investor", "Venture Capital", "Family Office", "ESG Fund", "Financial Institution", "Impact Investor"],
       cta: "Schedule a Meeting",
-      ctaHref: "/contact",
+      ctaHref: "/schedule-meeting",
     },
 
     supplier: {
@@ -164,7 +164,7 @@ const dict = {
       forLabel: "Ideal for",
       forTags: ["EV Motorcycle Manufacturers", "Battery Distributors", "Charging Providers", "Solar Manufacturers", "Recycling Companies", "Green Tech Importers"],
       cta: "Register Your Product",
-      ctaHref: "/contact",
+      ctaHref: "/register-product",
     },
 
     recipient: {
@@ -192,7 +192,7 @@ const dict = {
       forLabel: "Minimum Requirements",
       forTags: ["Min. 10 Units", "Indonesia-based", "Has NPWP (Tax ID)", "Actively Operating"],
       cta: "Apply for Partnership",
-      ctaHref: "/apply-ev-credit",
+      ctaHref: "/apply-partnership",
     },
 
     ctaTitle: "Ready to Join?",

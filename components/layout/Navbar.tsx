@@ -18,6 +18,12 @@ const dict = {
       { href: "/business/recycling",       label: "EV Battery Recycling", desc: "Daur ulang baterai EV" },
       { href: "/business/green-energy",    label: "Green Energy",         desc: "Solar, Geotermal & PLTSa" },
     ],
+    partnerLinks: [
+      { href: "/investor-partner",    label: "Overview",              desc: "Semua jalur kolaborasi Renewa" },
+      { href: "/schedule-meeting",    label: "Jadwalkan Pertemuan",   desc: "Diskusi investasi dengan tim kami" },
+      { href: "/register-product",    label: "Daftarkan Produk",      desc: "Bergabung sebagai mitra supplier" },
+      { href: "/apply-partnership",   label: "Ajukan Kemitraan",      desc: "Deploy armada EV untuk bisnis Anda" },
+    ],
   },
   en: {
     home: "Home",
@@ -32,6 +38,12 @@ const dict = {
       { href: "/business/recycling",       label: "EV Battery Recycling", desc: "Recycling used EV batteries" },
       { href: "/business/green-energy",    label: "Green Energy",         desc: "Solar, Geothermal & PLTSa" },
     ],
+    partnerLinks: [
+      { href: "/investor-partner",    label: "Overview",              desc: "All Renewa collaboration paths" },
+      { href: "/schedule-meeting",    label: "Schedule a Meeting",    desc: "Investment discussion with our team" },
+      { href: "/register-product",    label: "Register Product",      desc: "Join as a supplier partner" },
+      { href: "/apply-partnership",   label: "Apply for Partnership", desc: "Deploy an EV fleet for your business" },
+    ],
   },
 };
 
@@ -41,6 +53,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bizOpen, setBizOpen] = useState(false);
+  const [partnerOpen, setPartnerOpen] = useState(false);
   const lang = useLang();
   const setLang = useSetLang();
   const t = dict[lang];
@@ -55,7 +68,7 @@ export default function Navbar() {
     { href: "/",                   label: t.home },
     ...t.bizLinks.map(l => ({ href: l.href, label: l.label })),
     { href: "/vision-2035",        label: t.vision },
-    { href: "/investor-partner",   label: t.partner },
+    ...t.partnerLinks.map(l => ({ href: l.href, label: l.label })),
     { href: "/about",              label: t.about },
     { href: "/contact",            label: t.contact },
   ];
@@ -112,11 +125,30 @@ export default function Navbar() {
               onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
               {t.vision}
             </Link>
-            <Link href="/investor-partner" style={linkStyle}
-              onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
-              onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
-              {t.partner}
-            </Link>
+            {/* Investors dropdown */}
+            <div style={{ position: "relative" }} onMouseEnter={() => setPartnerOpen(true)} onMouseLeave={() => setPartnerOpen(false)}>
+              <button
+                style={{ display: "flex", alignItems: "center", gap: 4, ...linkStyle, background: "none", border: "none", cursor: "pointer" }}
+                onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
+                onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}
+              >
+                {t.partner} <ChevronDown size={13} style={{ transform: partnerOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+              </button>
+              {partnerOpen && (
+                <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 260, paddingTop: 12, zIndex: 100 }}>
+                  <div style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
+                    {t.partnerLinks.map((l) => (
+                      <Link key={l.href} href={l.href} style={{ display: "flex", flexDirection: "column", gap: 2, padding: "14px 20px", textDecoration: "none", borderBottom: "0.5px solid rgba(255,255,255,0.05)", transition: "background 0.15s" }}
+                        onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
+                        onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}>
+                        <span style={{ fontSize: 13, color: "#F2F5EF", fontWeight: 500 }}>{l.label}</span>
+                        <span style={{ fontSize: 11, color: "#7A9E85" }}>{l.desc}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <Link href="/about" style={linkStyle}
               onMouseOver={(e) => (e.currentTarget.style.color = "#F2F5EF")}
               onMouseOut={(e) => (e.currentTarget.style.color = "#7A9E85")}>
