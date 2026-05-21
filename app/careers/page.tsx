@@ -5,6 +5,7 @@ import Footer from "@/components/layout/Footer";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Link from "next/link";
 import { useLang } from "@/context/LanguageContext";
+import { Leaf, Zap, TrendingUp, Laptop, BookOpen, Globe } from "lucide-react";
 
 const openings = [
   {
@@ -87,22 +88,24 @@ const openings = [
   },
 ];
 
+const perkIcons = [Leaf, Zap, TrendingUp, Laptop, BookOpen, Globe];
+
 const perks = {
   id: [
-    { icon: "🌱", title: "Misi yang Bermakna", desc: "Bekerja langsung pada solusi nyata untuk transisi energi Indonesia." },
-    { icon: "⚡", title: "Ekosistem Berkembang", desc: "Bergabung di fase awal — setiap kontribusi Anda terlihat langsung dalam pertumbuhan bisnis." },
-    { icon: "📈", title: "Pertumbuhan Karir", desc: "Lingkungan yang mendorong kepemilikan, eksperimen, dan pengembangan skill cepat." },
-    { icon: "🏠", title: "Fleksibilitas Kerja", desc: "Hybrid work — keseimbangan kerja dari kantor Jakarta dan remote." },
-    { icon: "🎓", title: "Learning Budget", desc: "Anggaran tahunan untuk kursus, sertifikasi, dan konferensi industri." },
-    { icon: "🌍", title: "Dampak Regional", desc: "Potensi kontribusi pada ekspansi Renewa ke pasar Asia Tenggara." },
+    { title: "Misi yang Bermakna", desc: "Bekerja langsung pada solusi nyata untuk transisi energi Indonesia." },
+    { title: "Ekosistem Berkembang", desc: "Bergabung di fase awal — setiap kontribusi Anda terlihat langsung dalam pertumbuhan bisnis." },
+    { title: "Pertumbuhan Karir", desc: "Lingkungan yang mendorong kepemilikan, eksperimen, dan pengembangan skill cepat." },
+    { title: "Fleksibilitas Kerja", desc: "Hybrid work — keseimbangan kerja dari kantor Jakarta dan remote." },
+    { title: "Learning Budget", desc: "Anggaran tahunan untuk kursus, sertifikasi, dan konferensi industri." },
+    { title: "Dampak Regional", desc: "Potensi kontribusi pada ekspansi Renewa ke pasar Asia Tenggara." },
   ],
   en: [
-    { icon: "🌱", title: "Meaningful Mission", desc: "Work directly on real solutions for Indonesia's energy transition." },
-    { icon: "⚡", title: "Growing Ecosystem", desc: "Join at the early stage — every contribution is directly visible in business growth." },
-    { icon: "📈", title: "Career Growth", desc: "An environment that encourages ownership, experimentation, and rapid skill development." },
-    { icon: "🏠", title: "Work Flexibility", desc: "Hybrid work — balance between the Jakarta office and remote." },
-    { icon: "🎓", title: "Learning Budget", desc: "Annual budget for courses, certifications, and industry conferences." },
-    { icon: "🌍", title: "Regional Impact", desc: "Potential contribution to Renewa's expansion into Southeast Asian markets." },
+    { title: "Meaningful Mission", desc: "Work directly on real solutions for Indonesia's energy transition." },
+    { title: "Growing Ecosystem", desc: "Join at the early stage — every contribution is directly visible in business growth." },
+    { title: "Career Growth", desc: "An environment that encourages ownership, experimentation, and rapid skill development." },
+    { title: "Work Flexibility", desc: "Hybrid work — balance between the Jakarta office and remote." },
+    { title: "Learning Budget", desc: "Annual budget for courses, certifications, and industry conferences." },
+    { title: "Regional Impact", desc: "Potential contribution to Renewa's expansion into Southeast Asian markets." },
   ],
 };
 
@@ -217,13 +220,18 @@ export default function Careers() {
               {t.whyTitle} <span style={{ color: "#B8F53A" }}>{t.whyHighlight}</span>
             </h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-              {perks[lang].map((p) => (
+              {perks[lang].map((p, i) => {
+                const Icon = perkIcons[i];
+                return (
                 <div key={p.title} style={{ background: "rgba(0,0,0,0.2)", border: "0.5px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "28px 24px" }}>
-                  <div style={{ fontSize: 28, marginBottom: 14 }}>{p.icon}</div>
+                  <div style={{ marginBottom: 16, width: 40, height: 40, borderRadius: 8, background: "rgba(184,245,58,0.08)", border: "0.5px solid rgba(184,245,58,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon size={20} color="#B8F53A" strokeWidth={1.5} />
+                  </div>
                   <h3 style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 16, color: "#F2F5EF", marginBottom: 8 }}>{p.title}</h3>
                   <p style={{ fontSize: 14, color: "#7A9E85", lineHeight: 1.65, fontWeight: 300 }}>{p.desc}</p>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

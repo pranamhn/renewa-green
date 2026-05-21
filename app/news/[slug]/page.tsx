@@ -170,11 +170,11 @@ export default function ArticleDetail() {
                   },
                 },
                 {
-                  name: "Zaki Umari",
+                  name: "Zaki Umaro",
                   title: { id: "Chief Commercial Officer", en: "Chief Commercial Officer" },
                   bio: {
-                    id: "Zaki Umari menjabat sebagai Chief Commercial Officer PT Renewa Green Energy, bertanggung jawab atas strategi pertumbuhan komersial, pengembangan kemitraan, dan ekspansi pasar ekosistem Renewa.",
-                    en: "Zaki Umari serves as Chief Commercial Officer of PT Renewa Green Energy, responsible for commercial growth strategy, partnership development, and market expansion of the Renewa ecosystem.",
+                    id: "Zaki Umaro menjabat sebagai Chief Commercial Officer PT Renewa Green Energy, bertanggung jawab atas strategi pertumbuhan komersial, pengembangan kemitraan, dan ekspansi pasar ekosistem Renewa.",
+                    en: "Zaki Umaro serves as Chief Commercial Officer of PT Renewa Green Energy, responsible for commercial growth strategy, partnership development, and market expansion of the Renewa ecosystem.",
                   },
                 },
               ].map((person) => (

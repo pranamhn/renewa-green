@@ -4,6 +4,7 @@ import Footer from "@/components/layout/Footer";
 import SectionLabel from "@/components/ui/SectionLabel";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import { useLang } from "@/context/LanguageContext";
+import { Check } from "lucide-react";
 
 const statValues = [
   { val: 100000, suf: "" },
@@ -22,7 +23,7 @@ const milestoneBase = [
   { year: "2032", unit: "50.000 unit EV",   status: "future" },
   { year: "2033", unit: "68.000 unit EV",   status: "future" },
   { year: "2034", unit: "85.000 unit EV",   status: "future" },
-  { year: "2035", unit: "100.000 unit EV ✓", status: "future" },
+  { year: "2035", unit: "100.000 unit EV", status: "future" },
 ];
 
 const dict = {
@@ -125,7 +126,7 @@ export default function Vision2030() {
                       color: m.status === "active" ? "#0D2B1E" : "#fff",
                       fontFamily: "Syne, sans-serif", fontSize: 13, fontWeight: 700,
                     }}>
-                      {m.status === "done" ? "✓" : i + 1}
+                      {m.status === "done" ? <Check size={14} /> : i + 1}
                     </div>
                     {i < milestoneBase.length - 1 && (
                       <div style={{ width: 1, flex: 1, background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />

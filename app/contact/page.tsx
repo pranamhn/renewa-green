@@ -3,8 +3,9 @@ import { useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SectionLabel from "@/components/ui/SectionLabel";
-import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react";
 import { useLang } from "@/context/LanguageContext";
+import { saveFormSubmission } from "@/lib/adminStore";
 
 const dict = {
   id: {
@@ -55,6 +56,8 @@ export default function Contact() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const id = "CNT-" + Date.now().toString(36).toUpperCase().slice(-6);
+    saveFormSubmission("contact", id, form);
     setSent(true);
   };
 
@@ -112,7 +115,9 @@ export default function Contact() {
               <div>
                 {sent ? (
                   <div style={{ textAlign: "center", padding: "64px 32px", background: "#0D2B1E", border: "0.5px solid rgba(184,245,58,0.2)", borderRadius: 12 }}>
-                    <div style={{ fontSize: 40, marginBottom: 16 }}>✅</div>
+                    <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(184,245,58,0.1)", border: "0.5px solid rgba(184,245,58,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                      <CheckCircle size={28} color="#B8F53A" strokeWidth={1.5} />
+                    </div>
                     <h3 style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 24, color: "#fff", marginBottom: 8 }}>{t.successTitle}</h3>
                     <p style={{ fontSize: 15, color: "#7A9E85" }}>{t.successDesc}</p>
                   </div>

@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
+import { saveFormSubmission } from "@/lib/adminStore";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Link from "next/link";
 import { useLang } from "@/context/LanguageContext";
+import { Zap, Banknote, Leaf, Package, CheckCircle, Check } from "lucide-react";
 
 const provinces = [
   "DKI Jakarta", "Jawa Barat", "Jawa Tengah", "Jawa Timur", "Banten",
@@ -27,10 +29,10 @@ const dict = {
     ],
     whyTitle: "Kenapa Credit Connect?",
     benefits: [
-      { icon: "", title: "Proses Kilat", desc: "Approval dalam 1×24 jam. Tidak perlu antri atau datang ke kantor." },
-      { icon: "", title: "Bunga Terbaik", desc: "Sistem kami mencarikan penawaran terbaik dari 20+ lembaga keuangan." },
-      { icon: "", title: "Hasilkan Carbon Credit", desc: "Setiap unit EV aktif menghasilkan carbon credit yang bernilai." },
-      { icon: "", title: "Pengiriman ke Rumah", desc: "Motor EV diantar ke alamat Anda setelah proses selesai." },
+      { title: "Proses Kilat", desc: "Approval dalam 1×24 jam. Tidak perlu antri atau datang ke kantor." },
+      { title: "Bunga Terbaik", desc: "Sistem kami mencarikan penawaran terbaik dari 20+ lembaga keuangan." },
+      { title: "Hasilkan Carbon Credit", desc: "Setiap unit EV aktif menghasilkan carbon credit yang bernilai." },
+      { title: "Pengiriman ke Rumah", desc: "Motor EV diantar ke alamat Anda setelah proses selesai." },
     ],
     helpTitle: "Butuh Bantuan?",
     helpDesc: "Tim kami siap membantu Anda melalui proses pengajuan.",
@@ -107,10 +109,10 @@ const dict = {
     ],
     whyTitle: "Why Credit Connect?",
     benefits: [
-      { icon: "⚡", title: "Fast Approval", desc: "Approval within 24 hours. No queuing or office visits required." },
-      { icon: "💸", title: "Best Rates", desc: "Our system finds the best offer from 20+ financial institutions." },
-      { icon: "🌿", title: "Earn Carbon Credits", desc: "Every active EV unit generates valuable carbon credits." },
-      { icon: "📦", title: "Home Delivery", desc: "Your EV motorcycle is delivered to your address after completion." },
+      { title: "Fast Approval", desc: "Approval within 24 hours. No queuing or office visits required." },
+      { title: "Best Rates", desc: "Our system finds the best offer from 20+ financial institutions." },
+      { title: "Earn Carbon Credits", desc: "Every active EV unit generates valuable carbon credits." },
+      { title: "Home Delivery", desc: "Your EV motorcycle is delivered to your address after completion." },
     ],
     helpTitle: "Need Help?",
     helpDesc: "Our team is ready to guide you through the application process.",
@@ -176,6 +178,8 @@ const dict = {
   },
 };
 
+const benefitIcons = [Zap, Banknote, Leaf, Package];
+
 type FormState = {
   name: string; nik: string; email: string; phone: string;
   province: string; city: string;
@@ -202,7 +206,10 @@ export default function ApplyEvCredit() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setRefNo("RNW-" + Date.now().toString(36).toUpperCase().slice(-6));
+    const id = "RNW-" + Date.now().toString(36).toUpperCase().slice(-6);
+    setRefNo(id);
+    const { agree: _agree, ...rest } = form;
+    saveFormSubmission("apply-ev-credit", id, rest as Record<string, string>);
     setSent(true);
   };
 
@@ -242,10 +249,14 @@ export default function ApplyEvCredit() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {t.badges.map(b => (
                 <span key={b} style={{
-                  padding: "6px 16px", borderRadius: 100, fontSize: 12,
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "6px 14px", borderRadius: 100, fontSize: 12,
                   background: "rgba(184,245,58,0.06)", border: "0.5px solid rgba(184,245,58,0.22)",
                   color: "#B8F53A", fontFamily: "JetBrains Mono, monospace",
-                }}>{b}</span>
+                }}>
+                  <Check size={11} strokeWidth={2.5} />
+                  {b.replace(/^✓\s*/, "")}
+                </span>
               ))}
             </div>
           </div>
@@ -283,19 +294,22 @@ export default function ApplyEvCredit() {
                 {t.whyTitle}
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 40 }}>
-                {t.benefits.map(b => (
+                {t.benefits.map((b, i) => {
+                  const BIcon = benefitIcons[i];
+                  return (
                   <div key={b.title} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
                     <div style={{
                       width: 38, height: 38, borderRadius: 10, flexShrink: 0,
                       background: "rgba(184,245,58,0.07)", border: "0.5px solid rgba(184,245,58,0.18)",
-                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17,
-                    }}>{b.icon}</div>
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}><BIcon size={16} color="#B8F53A" /></div>
                     <div>
                       <p style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 14, color: "#fff", marginBottom: 3 }}>{b.title}</p>
                       <p style={{ fontSize: 13, color: "#7A9E85", lineHeight: 1.55, fontWeight: 300 }}>{b.desc}</p>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Help card */}
@@ -320,8 +334,10 @@ export default function ApplyEvCredit() {
                   <div style={{
                     width: 72, height: 72, borderRadius: "50%", margin: "0 auto 28px",
                     background: "rgba(184,245,58,0.1)", border: "0.5px solid rgba(184,245,58,0.3)",
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32,
-                  }}>✓</div>
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <CheckCircle size={32} color="#B8F53A" strokeWidth={1.5} />
+                  </div>
                   <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 28, color: "#fff", marginBottom: 12, letterSpacing: -0.5 }}>
                     {t.okTitle}
                   </h2>

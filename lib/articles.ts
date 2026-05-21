@@ -75,8 +75,8 @@ export const articles: Article[] = [
           en: "From a commercial standpoint, we are highly satisfied with the market response during the pilot. The conversion rates we recorded far exceeded our initial projections. More importantly, we are seeing genuine demand from the ride-hailing driver and courier segment — those who feel the most direct benefit from the fuel savings of an EV motorcycle. This is the strongest validation that our business model is on the right track.",
         },
         author: {
-          id: "Zaki Umari, Chief Commercial Officer PT Renewa Green Energy",
-          en: "Zaki Umari, Chief Commercial Officer, PT Renewa Green Energy",
+          id: "Zaki Umaro, Chief Commercial Officer PT Renewa Green Energy",
+          en: "Zaki Umaro, Chief Commercial Officer, PT Renewa Green Energy",
         },
       },
       {
@@ -152,8 +152,8 @@ export const articles: Article[] = [
           en: "This is not just an additional revenue stream. Part of the carbon credit income will be channelled to subsidise the loan instalments of our EV users — creating a positive cycle where the more people switch to EVs, the cheaper their instalments become, and the greater the carbon credits we generate. That is the advantage of the integrated ecosystem model we are building.",
         },
         author: {
-          id: "Zaki Umari, Chief Commercial Officer PT Renewa Green Energy",
-          en: "Zaki Umari, Chief Commercial Officer, PT Renewa Green Energy",
+          id: "Zaki Umaro, Chief Commercial Officer PT Renewa Green Energy",
+          en: "Zaki Umaro, Chief Commercial Officer, PT Renewa Green Energy",
         },
       },
     ],
@@ -265,8 +265,8 @@ export const articles: Article[] = [
           en: "In the first six weeks, we received more than 40 approaches from various financial institutions interested in joining as Credit Connect partners. This far exceeded our expectations. The market is beginning to understand that EV motorcycles are not just a technology trend — they are assets with a better credit risk profile than conventional motorcycles, because their operational costs are significantly lower and the battery value can serve as additional collateral.",
         },
         author: {
-          id: "Zaki Umari, Chief Commercial Officer PT Renewa Green Energy",
-          en: "Zaki Umari, Chief Commercial Officer, PT Renewa Green Energy",
+          id: "Zaki Umaro, Chief Commercial Officer PT Renewa Green Energy",
+          en: "Zaki Umaro, Chief Commercial Officer, PT Renewa Green Energy",
         },
       },
       {
@@ -363,8 +363,8 @@ export const articles: Article[] = [
           en: "From a commercial perspective, the biggest challenge is not technical — it is perception. Building consumer trust in after-sales service and spare parts availability is work that requires long-term consistency. That is why the Renewa ecosystem includes maintenance and after-sales components — because selling an EV motorcycle is the beginning, not the end, of our relationship with users.",
         },
         author: {
-          id: "Zaki Umari, Chief Commercial Officer PT Renewa Green Energy",
-          en: "Zaki Umari, Chief Commercial Officer, PT Renewa Green Energy",
+          id: "Zaki Umaro, Chief Commercial Officer PT Renewa Green Energy",
+          en: "Zaki Umaro, Chief Commercial Officer, PT Renewa Green Energy",
         },
       },
     ],
@@ -443,8 +443,8 @@ export const articles: Article[] = [
           en: "From a commercial perspective, this PLTS project is a very important proof of return for our investors. With a projected IRR of 14–16% and a 20-year Power Purchase Agreement tenor with PLN, this is an investment with very clear long-term revenue visibility. The success of this project will open larger financing channels for the next PLTS expansion.",
         },
         author: {
-          id: "Zaki Umari, Chief Commercial Officer PT Renewa Green Energy",
-          en: "Zaki Umari, Chief Commercial Officer, PT Renewa Green Energy",
+          id: "Zaki Umaro, Chief Commercial Officer PT Renewa Green Energy",
+          en: "Zaki Umaro, Chief Commercial Officer, PT Renewa Green Energy",
         },
       },
     ],

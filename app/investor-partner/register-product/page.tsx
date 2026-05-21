@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
+import { saveFormSubmission } from "@/lib/adminStore";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Link from "next/link";
 import { useLang } from "@/context/LanguageContext";
+import { Check, CheckCircle } from "lucide-react";
 
 const dict = {
   id: {
@@ -181,7 +183,9 @@ export default function RegisterProduct() {
     e.preventDefault();
     setLoading(true);
     setTimeout(() => {
-      setRegId("SPL-" + Date.now().toString(36).toUpperCase().slice(-6));
+      const id = "SPL-" + Date.now().toString(36).toUpperCase().slice(-6);
+      setRegId(id);
+      saveFormSubmission("register-product", id, form as unknown as Record<string, string>);
       setLoading(false);
       setSubmitted(true);
     }, 1200);
@@ -245,7 +249,7 @@ export default function RegisterProduct() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {t.benefits.map((b, i) => (
                     <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      <span style={{ color: "#B8F53A", fontSize: 12, lineHeight: "20px", flexShrink: 0, fontWeight: 700 }}>✓</span>
+                      <Check size={13} color="#B8F53A" style={{ flexShrink: 0, marginTop: 3 }} />
                       <p style={{ fontSize: 13, color: "#7A9E85", lineHeight: 1.55, fontWeight: 300 }}>{b}</p>
                     </div>
                   ))}
@@ -258,7 +262,9 @@ export default function RegisterProduct() {
 
               {submitted ? (
                 <div style={{ textAlign: "center", padding: "40px 0" }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(184,245,58,0.1)", border: "0.5px solid rgba(184,245,58,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: 28 }}>✓</div>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(184,245,58,0.1)", border: "0.5px solid rgba(184,245,58,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+                    <CheckCircle size={28} color="#B8F53A" strokeWidth={1.5} />
+                  </div>
                   <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 24, color: "#fff", letterSpacing: -0.5, marginBottom: 12 }}>{t.successTitle}</h2>
                   <p style={{ fontSize: 15, color: "#7A9E85", lineHeight: 1.7, maxWidth: 380, margin: "0 auto 28px", fontWeight: 300 }}>{t.successDesc}</p>
                   <div style={{ display: "inline-block", padding: "10px 24px", background: "rgba(184,245,58,0.06)", border: "0.5px solid rgba(184,245,58,0.2)", borderRadius: 8, marginBottom: 36 }}>

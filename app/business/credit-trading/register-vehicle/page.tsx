@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
+import { saveFormSubmission } from "@/lib/adminStore";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Link from "next/link";
 import { useLang } from "@/context/LanguageContext";
+import { CheckCircle, Check } from "lucide-react";
 
 const vehicleBrands = [
   "Honda (EM1 e:)", "Yamaha (E-Vino)", "Gesits G1", "Selis Agats",
@@ -143,7 +145,9 @@ export default function RegisterVehicle() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setRegId("EV-" + Date.now().toString(36).toUpperCase().slice(-6));
+    const id = "EV-" + Date.now().toString(36).toUpperCase().slice(-6);
+    setRegId(id);
+    saveFormSubmission("register-vehicle", id, form as Record<string, string>);
     setSent(true);
   };
 
@@ -177,7 +181,9 @@ export default function RegisterVehicle() {
             <p style={{ fontSize: 17, color: "#7A9E85", lineHeight: 1.7, maxWidth: 540, marginBottom: 32, fontWeight: 300 }}>{t.desc}</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {t.badges.map(b => (
-                <span key={b} style={{ padding: "6px 16px", borderRadius: 100, fontSize: 12, background: "rgba(184,245,58,0.06)", border: "0.5px solid rgba(184,245,58,0.22)", color: "#B8F53A", fontFamily: "JetBrains Mono, monospace" }}>{b}</span>
+                <span key={b} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 100, fontSize: 12, background: "rgba(184,245,58,0.06)", border: "0.5px solid rgba(184,245,58,0.22)", color: "#B8F53A", fontFamily: "JetBrains Mono, monospace" }}>
+                  <Check size={11} strokeWidth={2.5} />{b.replace(/^✓\s*/, "")}
+                </span>
               ))}
             </div>
           </div>
@@ -229,7 +235,9 @@ export default function RegisterVehicle() {
             <div style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
               {sent ? (
                 <div style={{ padding: "64px 48px", textAlign: "center" }}>
-                  <div style={{ width: 72, height: 72, borderRadius: "50%", margin: "0 auto 28px", background: "rgba(184,245,58,0.1)", border: "0.5px solid rgba(184,245,58,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, color: "#B8F53A" }}>✓</div>
+                  <div style={{ width: 72, height: 72, borderRadius: "50%", margin: "0 auto 28px", background: "rgba(184,245,58,0.1)", border: "0.5px solid rgba(184,245,58,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <CheckCircle size={32} color="#B8F53A" strokeWidth={1.5} />
+                  </div>
                   <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 26, color: "#fff", marginBottom: 12 }}>{t.okTitle}</h2>
                   <p style={{ fontSize: 15, color: "#7A9E85", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 32px" }}>{t.okDesc}</p>
                   <div style={{ display: "inline-block", padding: "12px 28px", borderRadius: 10, background: "rgba(184,245,58,0.06)", border: "0.5px solid rgba(184,245,58,0.25)", marginBottom: 36 }}>

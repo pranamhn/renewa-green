@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, LogIn, LayoutDashboard } from "lucide-react";
 import { useLang, useSetLang } from "@/context/LanguageContext";
+import { isLoggedIn } from "@/lib/adminStore";
 
 const dict = {
   id: {
@@ -54,6 +55,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bizOpen, setBizOpen] = useState(false);
   const [partnerOpen, setPartnerOpen] = useState(false);
+  const [adminLoggedIn, setAdminLoggedIn] = useState(false);
   const lang = useLang();
   const setLang = useSetLang();
   const t = dict[lang];
@@ -62,6 +64,10 @@ export default function Navbar() {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    setAdminLoggedIn(isLoggedIn());
   }, []);
 
   const mobileLinks = [
@@ -161,17 +167,18 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Language toggle */}
-          <div className="hidden lg:flex" style={{ alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 3 }}>
+          {/* Language toggle + admin login */}
+          <div className="hidden lg:flex" style={{ alignItems: "center", gap: 8 }}>
+            {/* Lang toggle */}
+            <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 3, height: 40 }}>
               {(["id", "en"] as const).map((l) => (
                 <button
                   key={l}
                   onClick={() => setLang(l)}
                   style={{
-                    padding: "4px 12px", borderRadius: 6, fontSize: 11,
-                    fontFamily: "DM Sans, sans-serif", fontWeight: 600,
-                    letterSpacing: "1px", textTransform: "uppercase",
+                    padding: "0 14px", height: 32, borderRadius: 7, fontSize: 11,
+                    fontFamily: "DM Sans, sans-serif", fontWeight: 700,
+                    letterSpacing: "1.5px", textTransform: "uppercase",
                     border: "none", cursor: "pointer", transition: "all 0.15s",
                     background: lang === l ? "#B8F53A" : "transparent",
                     color: lang === l ? "#0D2B1E" : "#7A9E85",
@@ -181,6 +188,35 @@ export default function Navbar() {
                 </button>
               ))}
             </div>
+
+            {/* Login / Dashboard button */}
+            <Link
+              href={adminLoggedIn ? "/admin/dashboard" : "/admin/login"}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                height: 40, padding: "0 16px", borderRadius: 10,
+                background: adminLoggedIn ? "rgba(184,245,58,0.12)" : "#B8F53A",
+                border: adminLoggedIn ? "0.5px solid rgba(184,245,58,0.35)" : "none",
+                color: adminLoggedIn ? "#B8F53A" : "#0D2B1E",
+                textDecoration: "none", fontFamily: "Syne, sans-serif",
+                fontWeight: 700, fontSize: 13, letterSpacing: "0.2px",
+                transition: "background 0.15s, box-shadow 0.15s",
+                boxShadow: adminLoggedIn ? "none" : "0 0 12px rgba(184,245,58,0.25)",
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = adminLoggedIn ? "rgba(184,245,58,0.2)" : "#D4F87A";
+                e.currentTarget.style.boxShadow = adminLoggedIn ? "none" : "0 0 18px rgba(184,245,58,0.4)";
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = adminLoggedIn ? "rgba(184,245,58,0.12)" : "#B8F53A";
+                e.currentTarget.style.boxShadow = adminLoggedIn ? "none" : "0 0 12px rgba(184,245,58,0.25)";
+              }}
+            >
+              {adminLoggedIn
+                ? <><LayoutDashboard size={14} /> Dashboard</>
+                : <><LogIn size={14} /> {lang === "id" ? "Masuk" : "Login"}</>
+              }
+            </Link>
           </div>
 
           <button className="lg:hidden" onClick={() => setMobileOpen(!mobileOpen)} style={{ background: "none", border: "none", color: "#7A9E85", cursor: "pointer" }}>

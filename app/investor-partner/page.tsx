@@ -4,6 +4,7 @@ import Footer from "@/components/layout/Footer";
 import SectionLabel from "@/components/ui/SectionLabel";
 import Link from "next/link";
 import { useLang } from "@/context/LanguageContext";
+import { Check } from "lucide-react";
 
 const dict = {
   id: {
@@ -204,7 +205,7 @@ const dict = {
 function BenefitItem({ text }: { text: string }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-      <span style={{ color: "#B8F53A", fontSize: 13, lineHeight: "22px", flexShrink: 0, fontWeight: 700 }}>✓</span>
+      <Check size={14} color="#B8F53A" style={{ flexShrink: 0, marginTop: 4 }} />
       <p style={{ fontSize: 14, color: "#7A9E85", lineHeight: 1.6, fontWeight: 300 }}>{text}</p>
     </div>
   );
