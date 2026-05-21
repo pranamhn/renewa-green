@@ -25,7 +25,7 @@ export default function Footer() {
     {
       title: "Connect",
       links: [
-        { href: "/partners", label: "Partners & Investors" },
+        { href: "/investor-partner", label: "Partners & Investors" },
         { href: "/contact", label: "Contact Us" },
         { href: "/privacy-policy", label: "Privacy Policy" },
         { href: "/terms", label: "Terms of Service" },

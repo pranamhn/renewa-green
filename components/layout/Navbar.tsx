@@ -47,7 +47,7 @@ const dict = {
   },
 };
 
-const linkStyle = { fontSize: 15, fontWeight: 700, color: "#7A9E85", textDecoration: "none", transition: "color 0.15s" } as const;
+const linkStyle = { fontSize: 15, fontWeight: 700, color: "#B8F53A", textDecoration: "none", transition: "color 0.15s" } as const;
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -85,7 +85,7 @@ export default function Navbar() {
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 40px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/" style={{ display: "flex", alignItems: "baseline", gap: 8, textDecoration: "none" }}>
             <span style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 24, color: "#fff", letterSpacing: -0.5 }}>RENEWA</span>
-            <span style={{ fontFamily: "DM Sans, sans-serif", fontWeight: 800, fontSize: 24, color: "#7A9E85", letterSpacing: -0.5, textTransform: "uppercase" }}>ASIA</span>
+            <span style={{ fontFamily: "DM Sans, sans-serif", fontWeight: 800, fontSize: 24, color: "#B8F53A", letterSpacing: -0.5, textTransform: "uppercase" }}>ASIA</span>
           </Link>
 
           <div style={{ display: "flex", alignItems: "center", gap: 32 }} className="hidden lg:flex">
@@ -111,8 +111,8 @@ export default function Navbar() {
                       <Link key={l.href} href={l.href} style={{ display: "flex", flexDirection: "column", gap: 2, padding: "14px 20px", textDecoration: "none", borderBottom: "0.5px solid rgba(255,255,255,0.05)", transition: "background 0.15s" }}
                         onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
                         onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}>
-                        <span style={{ fontSize: 13, color: "#F2F5EF", fontWeight: 500 }}>{l.label}</span>
-                        <span style={{ fontSize: 11, color: "#7A9E85" }}>{l.desc}</span>
+                        <span style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 500 }}>{l.label}</span>
+                        <span style={{ fontSize: 13, color: "#7A9E85" }}>{l.desc}</span>
                       </Link>
                     ))}
                   </div>
@@ -136,8 +136,8 @@ export default function Navbar() {
                       <Link key={l.href} href={l.href} style={{ display: "flex", flexDirection: "column", gap: 2, padding: "14px 20px", textDecoration: "none", borderBottom: "0.5px solid rgba(255,255,255,0.05)", transition: "background 0.15s" }}
                         onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
                         onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}>
-                        <span style={{ fontSize: 13, color: "#F2F5EF", fontWeight: 500 }}>{l.label}</span>
-                        <span style={{ fontSize: 11, color: "#7A9E85" }}>{l.desc}</span>
+                        <span style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 500 }}>{l.label}</span>
+                        <span style={{ fontSize: 13, color: "#7A9E85" }}>{l.desc}</span>
                       </Link>
                     ))}
                   </div>
@@ -170,7 +170,7 @@ export default function Navbar() {
                   onClick={() => setLang(l)}
                   style={{
                     padding: "4px 12px", borderRadius: 6, fontSize: 11,
-                    fontFamily: "JetBrains Mono, monospace", fontWeight: 600,
+                    fontFamily: "DM Sans, sans-serif", fontWeight: 600,
                     letterSpacing: "1px", textTransform: "uppercase",
                     border: "none", cursor: "pointer", transition: "all 0.15s",
                     background: lang === l ? "#B8F53A" : "transparent",
