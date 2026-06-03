@@ -170,9 +170,22 @@ export default function RegisterVehicle() {
     <>
       <Navbar />
       <main style={{ paddingTop: 68 }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .rv-hero { padding: 48px 20px 36px !important; }
+            .rv-steps { padding: 32px 20px !important; }
+            .rv-steps-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+            .rv-body { padding: 48px 20px 72px !important; }
+            .rv-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+            .rv-sticky { position: static !important; }
+            .rv-form-head { padding: 24px 20px 0 !important; }
+            .rv-form-pad { padding: 24px 20px !important; }
+            .rv-inner-row { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
 
         {/* ── Hero ── */}
-        <section style={{ padding: "64px 40px 52px", background: "#0B0F0E" }}>
+        <section className="rv-hero" style={{ padding: "64px 40px 52px", background: "#0B0F0E" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <SectionLabel text={t.label} />
             <h1 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(34px, 5vw, 56px)", color: "#fff", letterSpacing: -2, lineHeight: 1.08, marginBottom: 20 }}>
@@ -190,8 +203,8 @@ export default function RegisterVehicle() {
         </section>
 
         {/* ── Steps ── */}
-        <section style={{ padding: "48px 40px", background: "#000" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        <section className="rv-steps" style={{ padding: "48px 40px", background: "#000" }}>
+          <div className="rv-steps-grid" style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
             {t.steps.map((s, i) => (
               <div key={s.n} style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 24, position: "relative", overflow: "hidden" }}>
                 {i === 0 && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#B8F53A" }} />}
@@ -204,11 +217,11 @@ export default function RegisterVehicle() {
         </section>
 
         {/* ── Earn estimate + Form ── */}
-        <section style={{ padding: "64px 40px 96px", background: "#0B0F0E" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 56, alignItems: "flex-start" }}>
+        <section className="rv-body" style={{ padding: "64px 40px 96px", background: "#0B0F0E" }}>
+          <div className="rv-grid" style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 56, alignItems: "flex-start" }}>
 
             {/* Left — Earn estimate */}
-            <div style={{ position: "sticky", top: 96 }}>
+            <div className="rv-sticky" style={{ position: "sticky", top: 96 }}>
               <h3 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 22, color: "#fff", letterSpacing: -0.5, marginBottom: 24, lineHeight: 1.2 }}>{t.earnTitle}</h3>
               <div style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "28px 28px", marginBottom: 16 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -251,15 +264,15 @@ export default function RegisterVehicle() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  <div style={{ padding: "28px 40px 0", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
+                  <div className="rv-form-head" style={{ padding: "28px 40px 0", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
                     <p style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>{t.formTitle}</p>
                   </div>
-                  <div style={{ padding: "32px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
+                  <div className="rv-form-pad" style={{ padding: "32px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
 
                     {/* Section 1 */}
                     <div>
                       <p style={secHead}>{t.sec1}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                      <div className="rv-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.name}</label>
                           <input required style={inp} placeholder={t.f.namePh} value={form.name} onChange={set("name")} />
@@ -278,7 +291,7 @@ export default function RegisterVehicle() {
                     {/* Section 2 */}
                     <div>
                       <p style={secHead}>{t.sec2}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                      <div className="rv-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.brand}</label>
                           <select required style={sel} value={form.brand} onChange={set("brand")}>
@@ -295,7 +308,7 @@ export default function RegisterVehicle() {
                         <label style={lbl}>{t.f.plate}</label>
                         <input required style={inp} placeholder={t.f.platePh} value={form.plate} onChange={set("plate")} />
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                      <div className="rv-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.province}</label>
                           <select required style={sel} value={form.province} onChange={set("province")}>

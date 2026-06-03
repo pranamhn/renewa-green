@@ -205,9 +205,19 @@ export default function ScheduleMeeting() {
     <>
       <Navbar />
       <main style={{ paddingTop: 68, background: "#0B0F0E", minHeight: "100vh" }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .fp-hero { padding: 48px 20px 36px !important; }
+            .fp-body { padding: 40px 20px 64px !important; }
+            .fp-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+            .fp-sticky { position: static !important; }
+            .fp-card { padding: 24px 20px !important; }
+            .fp-inner-row { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
 
         {/* Hero */}
-        <section style={{ padding: "72px 40px 56px", background: "#000", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
+        <section className="fp-hero" style={{ padding: "72px 40px 56px", background: "#000", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <SectionLabel text={t.label} />
             <h1 style={{
@@ -224,11 +234,11 @@ export default function ScheduleMeeting() {
         </section>
 
         {/* Body */}
-        <section style={{ padding: "72px 40px 96px" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64, alignItems: "flex-start" }}>
+        <section className="fp-body" style={{ padding: "72px 40px 96px" }}>
+          <div className="fp-grid" style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64, alignItems: "flex-start" }}>
 
             {/* Left sticky */}
-            <div style={{ position: "sticky", top: 96 }}>
+            <div className="fp-sticky" style={{ position: "sticky", top: 96 }}>
               <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 22, color: "#fff", letterSpacing: -0.5, marginBottom: 28 }}>{t.leftTitle}</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 44 }}>
                 {t.leftItems.map((item, i) => (
@@ -264,7 +274,7 @@ export default function ScheduleMeeting() {
             </div>
 
             {/* Right — Form / Success */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "40px 36px" }}>
+            <div className="fp-card" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "40px 36px" }}>
 
               {submitted ? (
                 <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -285,7 +295,7 @@ export default function ScheduleMeeting() {
                   <h3 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 18, color: "#fff", letterSpacing: -0.5, marginBottom: 28 }}>{t.formTitle}</h3>
 
                   {/* Personal */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div className="fp-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
                       <label style={labelStyle}>{t.name} <span style={{ color: "#B8F53A" }}>*</span></label>
                       <input name="name" required value={form.name} onChange={handleChange} style={inputStyle} placeholder="John Doe" />
@@ -305,7 +315,7 @@ export default function ScheduleMeeting() {
                   </div>
 
                   {/* Investment */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div className="fp-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
                       <label style={labelStyle}>{t.investorType} <span style={{ color: "#B8F53A" }}>*</span></label>
                       <select name="investorType" required value={form.investorType} onChange={handleChange} style={inputStyle}>
@@ -321,7 +331,7 @@ export default function ScheduleMeeting() {
                   </div>
 
                   {/* Schedule */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div className="fp-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
                       <label style={labelStyle}>{t.preferredDate} <span style={{ color: "#B8F53A" }}>*</span></label>
                       <input name="preferredDate" type="date" required value={form.preferredDate} onChange={handleChange} style={{ ...inputStyle, colorScheme: "dark" }} />

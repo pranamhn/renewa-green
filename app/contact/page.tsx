@@ -78,7 +78,14 @@ export default function Contact() {
     <>
       <Navbar />
       <main style={{ paddingTop: 68 }}>
-        <section style={{ padding: "80px 40px", minHeight: "calc(100vh - 68px)", background: "#0B0F0E" }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .contact-section { padding: 48px 20px 64px !important; }
+            .contact-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+            .contact-form-row { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
+        <section className="contact-section" style={{ padding: "80px 40px", minHeight: "calc(100vh - 68px)", background: "#0B0F0E" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <SectionLabel text="Contact" />
             <h1 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(32px, 5vw, 56px)", color: "#fff", letterSpacing: -2, lineHeight: 1.05, marginBottom: 16 }}>
@@ -86,7 +93,7 @@ export default function Contact() {
             </h1>
             <p style={{ fontSize: 16, color: "#7A9E85", marginBottom: 56, fontWeight: 300 }}>{t.desc}</p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64 }}>
+            <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64 }}>
               <div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                   {contactInfo.map((c) => (
@@ -123,7 +130,7 @@ export default function Contact() {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div className="contact-form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                       <div>
                         <label style={{ fontSize: 12, color: "#7A9E85", display: "block", marginBottom: 8 }}>{t.fields.name}</label>
                         <input required style={inputStyle} placeholder={t.placeholders.name} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

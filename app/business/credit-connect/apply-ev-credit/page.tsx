@@ -231,9 +231,22 @@ export default function ApplyEvCredit() {
     <>
       <Navbar />
       <main style={{ paddingTop: 68 }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .aev-hero { padding: 48px 20px 36px !important; }
+            .aev-steps { padding: 28px 20px !important; }
+            .aev-steps-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+            .aev-body { padding: 48px 20px 72px !important; }
+            .aev-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+            .aev-sticky { position: static !important; }
+            .aev-form-pad { padding: 24px 20px !important; }
+            .aev-form-head { padding: 24px 20px 0 !important; }
+            .aev-inner-row { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
 
         {/* ── Hero ── */}
-        <section style={{ padding: "64px 40px 52px", background: "#0B0F0E" }}>
+        <section className="aev-hero" style={{ padding: "64px 40px 52px", background: "#0B0F0E" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <SectionLabel text={t.label} />
             <h1 style={{
@@ -263,8 +276,8 @@ export default function ApplyEvCredit() {
         </section>
 
         {/* ── Steps strip ── */}
-        <section style={{ padding: "32px 40px", background: "#000" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        <section className="aev-steps" style={{ padding: "32px 40px", background: "#000" }}>
+          <div className="aev-steps-grid" style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
             {t.steps.map((s, i) => (
               <div key={s.n} style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
                 <div style={{
@@ -285,11 +298,11 @@ export default function ApplyEvCredit() {
         </section>
 
         {/* ── Main: Left benefits + Right form ── */}
-        <section style={{ padding: "64px 40px 96px", background: "#0B0F0E" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1.7fr", gap: 56, alignItems: "flex-start" }}>
+        <section className="aev-body" style={{ padding: "64px 40px 96px", background: "#0B0F0E" }}>
+          <div className="aev-grid" style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1.7fr", gap: 56, alignItems: "flex-start" }}>
 
             {/* Left */}
-            <div style={{ position: "sticky", top: 96 }}>
+            <div className="aev-sticky" style={{ position: "sticky", top: 96 }}>
               <h3 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 22, color: "#fff", marginBottom: 28, letterSpacing: -0.5 }}>
                 {t.whyTitle}
               </h3>
@@ -371,16 +384,16 @@ export default function ApplyEvCredit() {
               ) : (
                 /* Form */
                 <form onSubmit={handleSubmit}>
-                  <div style={{ padding: "32px 40px 0", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
+                  <div className="aev-form-head" style={{ padding: "32px 40px 0", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
                     <p style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>{t.formTitle}</p>
                   </div>
 
-                  <div style={{ padding: "32px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
+                  <div className="aev-form-pad" style={{ padding: "32px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
 
                     {/* Section 1 — Personal */}
                     <div>
                       <p style={secHead}>{t.sec1}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                      <div className="aev-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.name}</label>
                           <input required style={inp} placeholder={t.f.namePh} value={form.name} onChange={set("name")} />
@@ -390,7 +403,7 @@ export default function ApplyEvCredit() {
                           <input required style={inp} placeholder={t.f.nikPh} value={form.nik} onChange={set("nik")} maxLength={16} pattern="\d{16}" />
                         </div>
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div className="aev-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.email}</label>
                           <input required type="email" style={inp} placeholder={t.f.emailPh} value={form.email} onChange={set("email")} />
@@ -405,7 +418,7 @@ export default function ApplyEvCredit() {
                     {/* Section 2 — Address */}
                     <div>
                       <p style={secHead}>{t.sec2}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div className="aev-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.province}</label>
                           <select required style={sel} value={form.province} onChange={set("province")}>
@@ -430,7 +443,7 @@ export default function ApplyEvCredit() {
                           {t.models.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
                         </select>
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div className="aev-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.dp}</label>
                           <select required style={sel} value={form.dp} onChange={set("dp")}>
@@ -451,7 +464,7 @@ export default function ApplyEvCredit() {
                     {/* Section 4 — Financial */}
                     <div>
                       <p style={secHead}>{t.sec4}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div className="aev-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.employment}</label>
                           <select required style={sel} value={form.employment} onChange={set("employment")}>

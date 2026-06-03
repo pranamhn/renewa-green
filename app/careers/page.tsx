@@ -171,10 +171,24 @@ export default function Careers() {
     <>
       <Navbar />
       <main style={{ paddingTop: 68 }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .careers-hero-sec { padding: 48px 20px 40px !important; }
+            .careers-hero-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+            .careers-why-sec { padding: 56px 20px !important; }
+            .careers-perks-grid { grid-template-columns: 1fr !important; }
+            .careers-jobs-sec { padding: 56px 20px 72px !important; }
+            .careers-job-card { grid-template-columns: 1fr !important; gap: 16px !important; }
+            .careers-job-apply { width: 100% !important; text-align: center !important; }
+            .careers-cta-sec { padding: 56px 20px !important; }
+            .careers-cta-inner { flex-direction: column !important; align-items: flex-start !important; gap: 24px !important; }
+            .careers-cta-btn { width: 100% !important; text-align: center !important; }
+          }
+        `}</style>
 
         {/* ── Hero ── */}
-        <section style={{ padding: "80px 40px 72px", background: "#0B0F0E" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
+        <section className="careers-hero-sec" style={{ padding: "80px 40px 72px", background: "#0B0F0E" }}>
+          <div className="careers-hero-grid" style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
             <div>
               <SectionLabel text={t.label} />
               <h1 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(36px, 4.5vw, 60px)", color: "#F2F5EF", letterSpacing: -2, lineHeight: 1.05, marginBottom: 20 }}>
@@ -213,13 +227,13 @@ export default function Careers() {
         </section>
 
         {/* ── Why Renewa ── */}
-        <section style={{ padding: "80px 40px", background: "#0D2B1E" }}>
+        <section className="careers-why-sec" style={{ padding: "80px 40px", background: "#0D2B1E" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <SectionLabel text={t.whyLabel} />
             <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(28px, 3.5vw, 44px)", color: "#F2F5EF", letterSpacing: -1.5, marginBottom: 48 }}>
               {t.whyTitle} <span style={{ color: "#B8F53A" }}>{t.whyHighlight}</span>
             </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            <div className="careers-perks-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
               {perks[lang].map((p, i) => {
                 const Icon = perkIcons[i];
                 return (
@@ -237,7 +251,7 @@ export default function Careers() {
         </section>
 
         {/* ── Open Positions ── */}
-        <section id="openings" style={{ padding: "80px 40px 96px", background: "#0B0F0E", scrollMarginTop: 80 }}>
+        <section id="openings" className="careers-jobs-sec" style={{ padding: "80px 40px 96px", background: "#0B0F0E", scrollMarginTop: 80 }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <SectionLabel text={t.openLabel} />
             <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(28px, 3.5vw, 44px)", color: "#F2F5EF", letterSpacing: -1.5, marginBottom: 32 }}>
@@ -263,7 +277,7 @@ export default function Careers() {
             {/* Job list */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {filtered.map((job) => (
-                <div key={job.id} style={{
+                <div key={job.id} className="careers-job-card" style={{
                   background: "#0D2B1E",
                   border: "0.5px solid rgba(255,255,255,0.07)",
                   borderRadius: 14,
@@ -308,7 +322,7 @@ export default function Careers() {
                   </div>
 
                   {/* Apply button */}
-                  <Link href="/contact" style={{
+                  <Link href="/contact" className="careers-job-apply" style={{
                     padding: "12px 24px", borderRadius: 8, fontSize: 13, fontWeight: 600,
                     background: "#B8F53A", color: "#0D2B1E", textDecoration: "none",
                     fontFamily: "Syne, sans-serif", whiteSpace: "nowrap",
@@ -327,8 +341,8 @@ export default function Careers() {
         </section>
 
         {/* ── Open Application CTA ── */}
-        <section style={{ padding: "80px 40px", background: "#B8F53A" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 32 }}>
+        <section className="careers-cta-sec" style={{ padding: "80px 40px", background: "#B8F53A" }}>
+          <div className="careers-cta-inner" style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 32 }}>
             <div>
               <p style={{ fontSize: 11, letterSpacing: "2px", textTransform: "uppercase", color: "#1A5C35", marginBottom: 12, fontWeight: 500 }}>
                 {lang === "id" ? "Lamaran Terbuka" : "Open Application"}
@@ -340,7 +354,7 @@ export default function Careers() {
                 {t.ctaDesc}
               </p>
             </div>
-            <Link href="/contact" style={{
+            <Link href="/contact" className="careers-cta-btn" style={{
               padding: "16px 32px", borderRadius: 8, fontSize: 15, fontWeight: 700,
               background: "#0D2B1E", color: "#F2F5EF", textDecoration: "none",
               fontFamily: "Syne, sans-serif", whiteSpace: "nowrap",

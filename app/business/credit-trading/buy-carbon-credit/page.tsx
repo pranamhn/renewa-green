@@ -173,9 +173,20 @@ export default function BuyCarbonCredit() {
     <>
       <Navbar />
       <main style={{ paddingTop: 68 }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .bcc-hero { padding: 48px 20px 36px !important; }
+            .bcc-why-sec { padding: 48px 20px !important; }
+            .bcc-why-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+            .bcc-form-sec { padding: 48px 20px 72px !important; }
+            .bcc-form-head { padding: 24px 20px 0 !important; }
+            .bcc-form-pad { padding: 24px 20px !important; }
+            .bcc-inner-row { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
 
         {/* ── Hero ── */}
-        <section style={{ padding: "64px 40px 52px", background: "#0B0F0E" }}>
+        <section className="bcc-hero" style={{ padding: "64px 40px 52px", background: "#0B0F0E" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <SectionLabel text={t.label} />
             <h1 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(36px, 5vw, 58px)", color: "#fff", letterSpacing: -2, lineHeight: 1.05, marginBottom: 20 }}>
@@ -193,9 +204,9 @@ export default function BuyCarbonCredit() {
         </section>
 
         {/* ── Why + Standards ── */}
-        <section style={{ padding: "64px 40px", background: "#000" }}>
+        <section className="bcc-why-sec" style={{ padding: "64px 40px", background: "#000" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "flex-start" }}>
+            <div className="bcc-why-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "flex-start" }}>
               <div>
                 <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(24px, 3vw, 36px)", color: "#fff", letterSpacing: -1, marginBottom: 32, lineHeight: 1.1 }}>
                   {t.whyTitle}
@@ -238,7 +249,7 @@ export default function BuyCarbonCredit() {
         </section>
 
         {/* ── Form ── */}
-        <section style={{ padding: "64px 40px 96px", background: "#0B0F0E" }}>
+        <section className="bcc-form-sec" style={{ padding: "64px 40px 96px", background: "#0B0F0E" }}>
           <div style={{ maxWidth: 860, margin: "0 auto" }}>
             <div style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
               {sent ? (
@@ -257,15 +268,15 @@ export default function BuyCarbonCredit() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  <div style={{ padding: "28px 40px 0", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
+                  <div className="bcc-form-head" style={{ padding: "28px 40px 0", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
                     <p style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>{t.formTitle}</p>
                   </div>
-                  <div style={{ padding: "32px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
+                  <div className="bcc-form-pad" style={{ padding: "32px 40px", display: "flex", flexDirection: "column", gap: 28 }}>
 
                     {/* Section 1 */}
                     <div>
                       <p style={secHead}>{t.sec1}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                      <div className="bcc-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.company}</label>
                           <input required style={inp} placeholder={t.f.companyPh} value={form.company} onChange={set("company")} />
@@ -275,7 +286,7 @@ export default function BuyCarbonCredit() {
                           <input required style={inp} placeholder={t.f.contactPh} value={form.contact} onChange={set("contact")} />
                         </div>
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                      <div className="bcc-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.email}</label>
                           <input required type="email" style={inp} placeholder={t.f.emailPh} value={form.email} onChange={set("email")} />
@@ -297,7 +308,7 @@ export default function BuyCarbonCredit() {
                     {/* Section 2 */}
                     <div>
                       <p style={secHead}>{t.sec2}</p>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                      <div className="bcc-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                         <div>
                           <label style={lbl}>{t.f.volume}</label>
                           <select required style={sel} value={form.volume} onChange={set("volume")}>

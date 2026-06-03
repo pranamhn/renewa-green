@@ -206,9 +206,19 @@ export default function ApplyPartnership() {
     <>
       <Navbar />
       <main style={{ paddingTop: 68, background: "#0B0F0E", minHeight: "100vh" }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .fp-hero { padding: 48px 20px 36px !important; }
+            .fp-body { padding: 40px 20px 64px !important; }
+            .fp-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+            .fp-sticky { position: static !important; }
+            .fp-card { padding: 24px 20px !important; }
+            .fp-inner-row { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
 
         {/* Hero */}
-        <section style={{ padding: "72px 40px 56px", background: "#000", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
+        <section className="fp-hero" style={{ padding: "72px 40px 56px", background: "#000", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
           <div style={{ maxWidth: 1280, margin: "0 auto" }}>
             <SectionLabel text={t.label} />
             <h1 style={{
@@ -225,11 +235,11 @@ export default function ApplyPartnership() {
         </section>
 
         {/* Body */}
-        <section style={{ padding: "72px 40px 96px" }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64, alignItems: "flex-start" }}>
+        <section className="fp-body" style={{ padding: "72px 40px 96px" }}>
+          <div className="fp-grid" style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 64, alignItems: "flex-start" }}>
 
             {/* Left sticky */}
-            <div style={{ position: "sticky", top: 96 }}>
+            <div className="fp-sticky" style={{ position: "sticky", top: 96 }}>
               <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 22, color: "#fff", letterSpacing: -0.5, marginBottom: 28 }}>{t.leftTitle}</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 36 }}>
                 {t.benefits.map((b, i) => (
@@ -257,7 +267,7 @@ export default function ApplyPartnership() {
             </div>
 
             {/* Right — Form / Success */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "40px 36px" }}>
+            <div className="fp-card" style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "40px 36px" }}>
 
               {submitted ? (
                 <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -278,7 +288,7 @@ export default function ApplyPartnership() {
                   <h3 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 18, color: "#fff", letterSpacing: -0.5, marginBottom: 28 }}>{t.formTitle}</h3>
 
                   {/* Company */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div className="fp-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
                       <label style={labelStyle}>{t.companyName} <span style={{ color: "#B8F53A" }}>*</span></label>
                       <input name="companyName" required value={form.companyName} onChange={handleChange} style={inputStyle} placeholder="PT. Contoh" />
@@ -305,7 +315,7 @@ export default function ApplyPartnership() {
                   <div style={{ width: "100%", height: 1, background: "rgba(255,255,255,0.06)", margin: "8px 0 20px" }} />
 
                   {/* Fleet info */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div className="fp-inner-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                     <div>
                       <label style={labelStyle}>{t.fleetType} <span style={{ color: "#B8F53A" }}>*</span></label>
                       <select name="fleetType" required value={form.fleetType} onChange={handleChange} style={inputStyle}>
