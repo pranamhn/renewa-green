@@ -1,9 +1,9 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   LogOut, Plus, Trash2, MessageSquare, Newspaper, Briefcase,
-  ChevronDown, ChevronUp, LayoutDashboard, Eye, EyeOff,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, LayoutDashboard, Eye, EyeOff,
   TrendingUp, Users, DollarSign, Edit2,
   Mail, Calendar, Handshake, Package, CreditCard, Car, BarChart3,
   BookOpen, BookMarked, Calculator, PieChart, Landmark,
@@ -15,27 +15,193 @@ import {
   getAdminJobs, saveAdminJob, deleteAdminJob,
   getInvestors, saveInvestor, deleteInvestor,
   getFundEntries, saveFundEntry, deleteFundEntry,
-  getChartAccounts, getJournalEntries, saveJournalEntry, deleteJournalEntry, computeLedger,
+  getChartAccounts, saveChartAccount, deleteChartAccount, getJournalEntries, saveJournalEntry, deleteJournalEntry, computeLedger,
+  getVendors, saveVendor, deleteVendor,
   FORM_LABELS, FORM_COLORS,
   type FormType, type FormSubmission, type AdminArticle, type AdminJob,
   type InvestorRecord, type InvestorType, type InvestorStatus,
   type FundEntry, type ChartAccount, type AccountType, type JournalEntry, type JournalLine,
-  type LedgerAccount,
+  type LedgerAccount, type VendorRecord, type ContactType,
 } from "@/lib/adminStore";
+import {
+  apiGetSubmissions, apiDeleteSubmission,
+  apiGetArticles, apiSaveArticle, apiDeleteArticle,
+  apiGetJobs, apiSaveJob, apiDeleteJob,
+  apiGetInvestors, apiSaveInvestor, apiDeleteInvestor,
+  apiGetFundEntries, apiSaveFundEntry, apiDeleteFundEntry,
+  apiGetChartAccounts, apiSaveChartAccount, apiDeleteChartAccount,
+  apiGetJournalEntries, apiSaveJournalEntry, apiDeleteJournalEntry,
+  apiGetVendors, apiSaveVendor, apiDeleteVendor,
+} from "@/lib/api";
 import { articles as staticArticles } from "@/lib/articles";
 
 /* ─── style helpers ───────────────────────────────────── */
 const inp: React.CSSProperties = {
-  width: "100%", padding: "10px 14px", borderRadius: 8, fontSize: 13,
-  background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)",
-  color: "#F2F5EF", outline: "none", fontFamily: "DM Sans, sans-serif", boxSizing: "border-box",
+  width: "100%", padding: "10px 14px", borderRadius: 8, fontSize: 14,
+  background: "#FFFFFF", border: "1px solid #D6DBE8",
+  color: "#1A2232", outline: "none", fontFamily: "DM Sans, sans-serif", boxSizing: "border-box",
+  fontWeight: 400,
 };
 const textarea: React.CSSProperties = { ...inp, resize: "vertical" as const, lineHeight: 1.6 };
-const label12: React.CSSProperties = { fontSize: 12, color: "#7A9E85", display: "block", marginBottom: 6 };
+const label12: React.CSSProperties = { fontSize: 13, color: "#697586", display: "block", marginBottom: 6, fontWeight: 500 };
 const card: React.CSSProperties = {
-  background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)",
+  background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.06)",
   borderRadius: 12, padding: "18px 20px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03)",
 };
+
+/* ─── DatePicker ───────────────────────────────────────── */
+const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const DAYS_ID   = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+
+function DatePicker({ value, onChange, placeholder, monthOnly = false }: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  monthOnly?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [viewYear, setViewYear]   = useState(() => new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  }
+  function pick(day: number) {
+    onChange(`${day} ${MONTHS_ID[viewMonth]} ${viewYear}`);
+    setOpen(false);
+  }
+  function pickMonth(mi: number) {
+    onChange(`${MONTHS_ID[mi]} ${viewYear}`);
+    setOpen(false);
+  }
+
+  const firstDow   = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMon  = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const todayObj   = new Date();
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", width: "100%" }}>
+      {/* Input trigger */}
+      <div style={{ position: "relative" }}>
+        <input
+          readOnly
+          style={{ ...inp, paddingRight: 38, cursor: "pointer" }}
+          value={value}
+          placeholder={placeholder ?? (monthOnly ? "Jan 2026" : "15 Jan 2026")}
+          onClick={() => setOpen(o => !o)}
+        />
+        <Calendar size={15} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#9AA5B4", pointerEvents: "none" }} />
+      </div>
+
+      {/* Floating calendar */}
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999,
+          background: "#FFFFFF", borderRadius: 12,
+          border: "1px solid #E4E8F2",
+          boxShadow: "0 8px 28px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
+          width: monthOnly ? 240 : 276, padding: "14px 14px 12px",
+        }}>
+          {/* Month/Year header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <button onClick={prevMonth}
+              style={{ background: "#F4F6FB", border: "none", borderRadius: 6, cursor: "pointer", display: "flex", padding: 5, color: "#697586" }}>
+              <ChevronLeft size={14} />
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#1A2232", fontFamily: "Geist, sans-serif" }}>
+                {MONTHS_ID[viewMonth]} {viewYear}
+              </span>
+            </div>
+            <button onClick={nextMonth}
+              style={{ background: "#F4F6FB", border: "none", borderRadius: 6, cursor: "pointer", display: "flex", padding: 5, color: "#697586" }}>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+
+          {monthOnly ? (
+            /* Month grid */
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4 }}>
+              {MONTHS_ID.map((m, i) => {
+                const sel = value.startsWith(`${m} `);
+                return (
+                  <button key={m} onClick={() => pickMonth(i)}
+                    style={{ padding: "8px 0", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13,
+                      background: sel ? "#2D7A4F" : "transparent",
+                      color: sel ? "#FFFFFF" : "#1A2232",
+                      fontWeight: sel ? 600 : 400,
+                      fontFamily: "DM Sans, sans-serif",
+                    }}>
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <>
+              {/* Day-of-week headers */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 6 }}>
+                {DAYS_ID.map(d => (
+                  <p key={d} style={{ fontSize: 11, color: "#9AA5B4", textAlign: "center", fontWeight: 600, fontFamily: "DM Sans, sans-serif" }}>{d}</p>
+                ))}
+              </div>
+              {/* Day cells */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                {Array.from({ length: firstDow }).map((_, i) => <span key={`e${i}`} />)}
+                {Array.from({ length: daysInMon }).map((_, i) => {
+                  const day = i + 1;
+                  const sel = value === `${day} ${MONTHS_ID[viewMonth]} ${viewYear}`;
+                  const isToday = day === todayObj.getDate() && viewMonth === todayObj.getMonth() && viewYear === todayObj.getFullYear();
+                  return (
+                    <button key={day} onClick={() => pick(day)}
+                      style={{ padding: "6px 0", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 13,
+                        background: sel ? "#2D7A4F" : isToday ? "#EBF5EE" : "transparent",
+                        color: sel ? "#FFFFFF" : isToday ? "#2D7A4F" : "#1A2232",
+                        fontWeight: sel ? 600 : 400,
+                        textAlign: "center", fontFamily: "DM Sans, sans-serif",
+                      }}>
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Today shortcut */}
+              <div style={{ borderTop: "1px solid #E4E8F2", marginTop: 10, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
+                <button onClick={() => {
+                  const t = new Date();
+                  setViewMonth(t.getMonth()); setViewYear(t.getFullYear());
+                  pick(t.getDate());
+                }}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#2D7A4F", fontWeight: 500, fontFamily: "DM Sans, sans-serif" }}>
+                  Hari ini
+                </button>
+                <button onClick={() => { onChange(""); setOpen(false); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#9AA5B4", fontFamily: "DM Sans, sans-serif" }}>
+                  Hapus
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const CATEGORIES_ID = ["Ekosistem EV", "Carbon Market", "Energi Terbarukan", "Kemitraan"];
 const DEPTS_ID = ["Teknologi", "Bisnis", "Operasional", "Energi"];
@@ -56,10 +222,10 @@ const INV_TYPE_LABEL: Record<InvestorType, string> = {
   angel: "Angel", vc: "VC", strategic: "Strategic", government: "Government",
 };
 const INV_STATUS_COLOR: Record<InvestorStatus, string> = {
-  disbursed: "#B8F53A", committed: "#60C4F8", pending: "#F8C660",
+  disbursed: "#2D7A4F", committed: "#3E7CC8", pending: "#d97706",
 };
 const INV_TYPE_COLOR: Record<InvestorType, string> = {
-  angel: "#F8C660", vc: "#60C4F8", strategic: "#C060F8", government: "#5DD6A0",
+  angel: "#B06820", vc: "#3E7CC8", strategic: "#7050C0", government: "#5DD6A0",
 };
 
 function slugify(s: string) { return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); }
@@ -68,8 +234,7 @@ function hex(hex: string, a: number) {
   return `rgba(${r},${g},${b},${a})`;
 }
 function fmtM(m: number) {
-  if (m >= 1000) return `Rp ${(m / 1000).toFixed(1)}M`;
-  return `Rp ${m.toLocaleString("id-ID")} Jt`;
+  return `Rp ${(m * 1_000_000).toLocaleString("id-ID")}`;
 }
 function getHiddenIds(key: string): string[] {
   if (typeof window === "undefined") return [];
@@ -85,21 +250,21 @@ const ACC_TYPE_LABEL: Record<AccountType, string> = {
   asset: "Aset", liability: "Kewajiban", equity: "Ekuitas", revenue: "Pendapatan", expense: "Beban",
 };
 const ACC_TYPE_COLOR: Record<AccountType, string> = {
-  asset: "#60C4F8", liability: "#F86060", equity: "#C060F8", revenue: "#B8F53A", expense: "#F8C660",
+  asset: "#3E7CC8", liability: "#C03C3C", equity: "#7050C0", revenue: "#2D7A4F", expense: "#B06820",
 };
 const ACC_TYPE_ORDER: AccountType[] = ["asset", "liability", "equity", "revenue", "expense"];
 const HIDDEN_STATIC_NEWS_KEY = "renewa_hidden_static_news";
 const HIDDEN_STATIC_JOBS_KEY = "renewa_hidden_static_jobs";
 
 const ROUND_COLORS: Record<string, string> = {
-  "Pre-Seed": "#B8F53A", "Seed": "#60C4F8", "Seed Ext.": "#C060F8",
-  "Series A": "#F8C660", "Series B": "#5DD6A0", "Strategic": "#C060F8", "Government": "#5DD6A0",
+  "Pre-Seed": "#2D7A4F", "Seed": "#3E7CC8", "Seed Ext.": "#7050C0",
+  "Series A": "#B06820", "Series B": "#5DD6A0", "Strategic": "#7050C0", "Government": "#5DD6A0",
   "EV Investor": "#22D3EE",
 };
 
 /* ─── view type ───────────────────────────────────────── */
 type View = "sub:all" | `sub:${FormType}` | "news" | "careers" | "finance" | "investors"
-  | "journal" | "ledger" | "trial-balance" | "profit-loss" | "balance-sheet";
+  | "journal" | "ledger" | "trial-balance" | "profit-loss" | "balance-sheet" | "coa" | "vendors";
 
 /* ═══════════════════════════════════════════════════════ */
 /* ─── Submissions ─────────────────────────────────────── */
@@ -107,7 +272,7 @@ function SubmissionsView({ formType }: { formType: FormType | "all" }) {
   const [subs, setSubs] = useState<FormSubmission[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  useEffect(() => { setSubs(getSubmissions()); }, []);
+  useEffect(() => { apiGetSubmissions().then(setSubs).catch(() => setSubs(getSubmissions())); }, []);
 
   const filtered = formType === "all" ? subs : subs.filter(s => s.formType === formType);
   const counts = ALL_FORM_TYPES.reduce<Record<FormType, number>>((acc, ft) => {
@@ -119,33 +284,38 @@ function SubmissionsView({ formType }: { formType: FormType | "all" }) {
     <div>
       {/* Stats grid — show on "all" view only */}
       {formType === "all" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 32 }}>
           {ALL_FORM_TYPES.map(ft => (
             <div key={ft} style={{
-              background: hex(FORM_COLORS[ft], 0.06),
-              border: `0.5px solid ${hex(FORM_COLORS[ft], 0.2)}`,
-              borderRadius: 10, padding: "14px 16px",
+              background: "#FFFFFF",
+              border: `1px solid ${hex(FORM_COLORS[ft], 0.25)}`,
+              borderTop: `3px solid ${FORM_COLORS[ft]}`,
+              borderRadius: 10,
+              padding: "16px 18px",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <span style={{ color: FORM_COLORS[ft], display: "flex" }}>{FORM_ICONS[ft]}</span>
-                <p style={{ fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace" }}>{FORM_LABELS[ft]}</p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <p style={{ fontSize: 13, color: "#697586", fontFamily: "DM Sans, sans-serif", fontWeight: 500 }}>{FORM_LABELS[ft]}</p>
+                <span style={{ color: FORM_COLORS[ft], display: "flex", background: hex(FORM_COLORS[ft], 0.1), borderRadius: 6, padding: 5 }}>{FORM_ICONS[ft]}</span>
               </div>
-              <p style={{ fontSize: 24, fontFamily: "Syne, sans-serif", fontWeight: 800, color: FORM_COLORS[ft] }}>
+              <p style={{ fontSize: 30, fontFamily: "DM Sans, sans-serif", fontWeight: 700, color: "#1A2232", lineHeight: 1 }}>
                 {counts[ft]}
               </p>
+              <p style={{ fontSize: 13, color: "#9AA5B4", marginTop: 4 }}>submission</p>
             </div>
           ))}
         </div>
       )}
 
       {filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "64px 0", color: "#7A9E85" }}>
-          <MessageSquare size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
-          <p style={{ fontSize: 15, fontWeight: 300 }}>Belum ada submission masuk.</p>
+        <div style={{ textAlign: "center", padding: "80px 0", color: "#9AA5B4", background: "#FFFFFF", borderRadius: 12, border: "1px solid #E4E8F2" }}>
+          <MessageSquare size={36} style={{ marginBottom: 12, opacity: 0.3 }} />
+          <p style={{ fontSize: 15, color: "#697586", fontWeight: 400 }}>Belum ada submission masuk.</p>
+          <p style={{ fontSize: 13, color: "#9AA5B4", marginTop: 4 }}>Submission akan muncul di sini setelah pengguna mengisi form.</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <p style={{ fontSize: 12, color: "#7A9E85", marginBottom: 4 }}>{filtered.length} submission</p>
+          <p style={{ fontSize: 13, color: "#697586", marginBottom: 4 }}>{filtered.length} submission</p>
           {filtered.map(s => {
             const color = FORM_COLORS[s.formType];
             return (
@@ -158,30 +328,30 @@ function SubmissionsView({ formType }: { formType: FormType | "all" }) {
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
                       <span style={{
                         display: "inline-flex", alignItems: "center", gap: 5,
-                        fontSize: 10, padding: "2px 9px", borderRadius: 100,
+                        fontSize: 12, padding: "2px 9px", borderRadius: 100,
                         background: hex(color, 0.1), border: `0.5px solid ${hex(color, 0.3)}`,
                         color, fontFamily: "JetBrains Mono, monospace",
                       }}>
                         {FORM_ICONS[s.formType]} {FORM_LABELS[s.formType]}
                       </span>
-                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "JetBrains Mono, monospace" }}>{s.refId}</span>
+                      <span style={{ fontSize: 12, color: "rgba(0,0,0,0.25)", fontFamily: "JetBrains Mono, monospace" }}>{s.refId}</span>
                     </div>
-                    <p style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.primaryName}</p>
-                    <p style={{ fontSize: 12, color: "#7A9E85" }}>{s.primaryEmail} · {s.date}</p>
+                    <p style={{ fontSize: 14, color: "#1A2232", fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.primaryName}</p>
+                    <p style={{ fontSize: 13, color: "#697586" }}>{s.primaryEmail} · {s.date}</p>
                   </div>
                   <div style={{ marginLeft: 12, flexShrink: 0 }}>
-                    {expanded === s.id ? <ChevronUp size={16} color="#7A9E85" /> : <ChevronDown size={16} color="#7A9E85" />}
+                    {expanded === s.id ? <ChevronUp size={16} color="#9AA5B4" /> : <ChevronDown size={16} color="#9AA5B4" />}
                   </div>
                 </div>
                 {expanded === s.id && (
-                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #E4E8F2" }}>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
                       {Object.entries(s.data).map(([k, v]) => (
-                        <div key={k} style={{ background: "rgba(0,0,0,0.2)", borderRadius: 6, padding: "8px 12px" }}>
-                          <p style={{ fontSize: 10, color: "#7A9E85", marginBottom: 3, textTransform: "capitalize", fontFamily: "JetBrains Mono, monospace" }}>
+                        <div key={k} style={{ background: "#F4F6FB", borderRadius: 6, padding: "8px 12px" }}>
+                          <p style={{ fontSize: 12, color: "#697586", marginBottom: 3, textTransform: "capitalize", fontFamily: "JetBrains Mono, monospace" }}>
                             {k.replace(/([A-Z])/g, " $1").replace(/_/g, " ").trim()}
                           </p>
-                          <p style={{ fontSize: 13, color: "#F2F5EF", lineHeight: 1.5, wordBreak: "break-word" }}>{v || "—"}</p>
+                          <p style={{ fontSize: 14, color: "#1A2232", lineHeight: 1.5, wordBreak: "break-word" }}>{v || "—"}</p>
                         </div>
                       ))}
                     </div>
@@ -200,12 +370,11 @@ function SubmissionsView({ formType }: { formType: FormType | "all" }) {
 /* ─── Finance Dashboard ───────────────────────────────── */
 function FinanceView() {
   /* investor names for dropdown — reload whenever form opens */
-  const [investorNames, setInvestorNames] = useState<string[]>([]);
+  const [allInvestors, setAllInvestors] = useState<InvestorRecord[]>([]);
+  const investorNames = allInvestors.map(i => i.name);
   const [showFundForm, setShowFundForm] = useState(false);
-  useEffect(() => {
-    if (showFundForm) setInvestorNames(getInvestors().map(i => i.name));
-  }, [showFundForm]);
-  useEffect(() => { setInvestorNames(getInvestors().map(i => i.name)); }, []);
+  const refreshInvestors = useCallback(() => { apiGetInvestors().then(setAllInvestors).catch(() => setAllInvestors(getInvestors())); }, []);
+  useEffect(() => { refreshInvestors(); }, [refreshInvestors]);
 
   /* fund entries state */
   const [entries, setEntries] = useState<FundEntry[]>([]);
@@ -214,21 +383,21 @@ function FinanceView() {
   const [entryForm, setEntryForm] = useState(blankEntry);
   const [entryFromOther, setEntryFromOther] = useState(false);
 
-  const refreshEntries = useCallback(() => setEntries(getFundEntries()), []);
+  const refreshEntries = useCallback(() => { apiGetFundEntries().then(setEntries).catch(() => setEntries(getFundEntries())); }, []);
   useEffect(() => { refreshEntries(); }, [refreshEntries]);
 
   const totalReceived = entries.reduce((s, e) => s + e.amountM, 0);
 
   const handleSaveEntry = () => {
     if (!entryForm.from.trim() || !entryForm.amountM) return;
-    saveFundEntry({ ...entryForm, id: editEntryId || Date.now().toString() });
+    const entry: FundEntry = { ...entryForm, id: editEntryId || Date.now().toString() };
+    apiSaveFundEntry(entry).catch(() => saveFundEntry(entry));
     setEntryForm(blankEntry); setEntryFromOther(false); setShowFundForm(false); setEditEntryId(null);
     refreshEntries();
   };
   const startEditEntry = (e: FundEntry) => {
-    const isOther = !getInvestors().map(i => i.name).includes(e.from);
+    setEntryFromOther(!allInvestors.map(i => i.name).includes(e.from));
     setEntryForm({ from: e.from, amountM: e.amountM, date: e.date, round: e.round, notes: e.notes || "" });
-    setEntryFromOther(isOther);
     setEditEntryId(e.id); setShowFundForm(true);
   };
 
@@ -240,7 +409,7 @@ function FinanceView() {
     <div>
       {/* ── Investor Correlation ── */}
       {entries.length > 0 && totalReceived > 0 && (() => {
-        const invList = getInvestors();
+        const invList = allInvestors;
         const byName: Record<string, { inv: InvestorRecord | undefined; total: number; rounds: string[] }> = {};
         entries.forEach(e => {
           if (!byName[e.from]) byName[e.from] = { inv: invList.find(i => i.name === e.from), total: 0, rounds: [] };
@@ -250,42 +419,42 @@ function FinanceView() {
         const sorted = Object.entries(byName).sort((a, b) => b[1].total - a[1].total);
         return (
           <div style={{ ...card, marginBottom: 28 }}>
-            <p style={{ fontSize: 12, color: "#B8F53A", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 20 }}>KORELASI INVESTOR — KONTRIBUSI DANA</p>
+            <p style={{ fontSize: 13, color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 20 }}>KORELASI INVESTOR — KONTRIBUSI DANA</p>
             {sorted.map(([name, data], idx) => {
               const pct = (data.total / totalReceived) * 100;
-              const color = data.inv ? INV_TYPE_COLOR[data.inv.type] : "#7A9E85";
+              const color = data.inv ? INV_TYPE_COLOR[data.inv.type] : "#9AA5B4";
               const isLast = idx === sorted.length - 1;
               return (
-                <div key={name} style={{ marginBottom: isLast ? 0 : 16, paddingBottom: isLast ? 0 : 16, borderBottom: isLast ? "none" : "0.5px solid rgba(255,255,255,0.05)" }}>
+                <div key={name} style={{ marginBottom: isLast ? 0 : 16, paddingBottom: isLast ? 0 : 16, borderBottom: isLast ? "none" : "0.5px solid rgba(0,0,0,0.04)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: hex(color, 0.12), border: `0.5px solid ${hex(color, 0.3)}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color, fontFamily: "Syne, sans-serif" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: hex(color, 0.12), border: `0.5px solid ${hex(color, 0.3)}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color, fontFamily: "Geist, sans-serif" }}>
                         {name.charAt(0)}
                       </div>
                       <div>
-                        <p style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 600, marginBottom: 3 }}>{name}</p>
+                        <p style={{ fontSize: 14, color: "#1A2232", fontWeight: 600, marginBottom: 3 }}>{name}</p>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                           {data.inv ? (
                             <>
-                              <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 100, background: hex(color, 0.1), color, border: `0.5px solid ${hex(color, 0.25)}`, fontFamily: "JetBrains Mono, monospace" }}>{INV_TYPE_LABEL[data.inv.type]}</span>
-                              <span style={{ fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace" }}>{data.inv.round} · {data.inv.equity}% equity</span>
-                              <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 100, background: hex(INV_STATUS_COLOR[data.inv.status], 0.08), color: INV_STATUS_COLOR[data.inv.status], border: `0.5px solid ${hex(INV_STATUS_COLOR[data.inv.status], 0.2)}`, fontFamily: "JetBrains Mono, monospace" }}>{data.inv.status}</span>
+                              <span style={{ fontSize: 12, padding: "1px 7px", borderRadius: 100, background: hex(color, 0.1), color, border: `0.5px solid ${hex(color, 0.25)}`, fontFamily: "JetBrains Mono, monospace" }}>{INV_TYPE_LABEL[data.inv.type]}</span>
+                              <span style={{ fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace" }}>{data.inv.round} · {data.inv.equity}% equity</span>
+                              <span style={{ fontSize: 12, padding: "1px 7px", borderRadius: 100, background: hex(INV_STATUS_COLOR[data.inv.status], 0.08), color: INV_STATUS_COLOR[data.inv.status], border: `0.5px solid ${hex(INV_STATUS_COLOR[data.inv.status], 0.2)}`, fontFamily: "JetBrains Mono, monospace" }}>{data.inv.status}</span>
                             </>
                           ) : (
-                            <span style={{ fontSize: 11, color: "#7A9E85" }}>Pihak eksternal</span>
+                            <span style={{ fontSize: 13, color: "#697586" }}>Pihak eksternal</span>
                           )}
                           {data.rounds.map(r => (
-                            <span key={r} style={{ fontSize: 10, padding: "1px 7px", borderRadius: 100, background: hex(ROUND_COLORS[r] || "#7A9E85", 0.08), color: ROUND_COLORS[r] || "#7A9E85", border: `0.5px solid ${hex(ROUND_COLORS[r] || "#7A9E85", 0.2)}`, fontFamily: "JetBrains Mono, monospace" }}>{r}</span>
+                            <span key={r} style={{ fontSize: 12, padding: "1px 7px", borderRadius: 100, background: hex(ROUND_COLORS[r] || "#9AA5B4", 0.08), color: ROUND_COLORS[r] || "#9AA5B4", border: `0.5px solid ${hex(ROUND_COLORS[r] || "#9AA5B4", 0.2)}`, fontFamily: "JetBrains Mono, monospace" }}>{r}</span>
                           ))}
                         </div>
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <p style={{ fontSize: 16, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#F2F5EF" }}>{fmtM(data.total)}</p>
-                      <p style={{ fontSize: 11, color: "#7A9E85", marginTop: 2 }}>{pct.toFixed(1)}% dari total</p>
+                      <p style={{ fontSize: 16, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#1A2232" }}>{fmtM(data.total)}</p>
+                      <p style={{ fontSize: 13, color: "#697586", marginTop: 2 }}>{pct.toFixed(1)}% dari total</p>
                     </div>
                   </div>
-                  <div style={{ position: "relative", height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ position: "relative", height: 5, background: "rgba(0,0,0,0.04)", borderRadius: 3, overflow: "hidden" }}>
                     <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${hex(color, 0.6)}, ${color})`, borderRadius: 3 }} />
                   </div>
                 </div>
@@ -299,18 +468,18 @@ function FinanceView() {
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
-            <p style={{ fontSize: 12, color: "#B8F53A", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 4 }}>DANA MASUK</p>
+            <p style={{ fontSize: 13, color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 4 }}>DANA MASUK</p>
             <div style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
-              <p style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 20, color: "#F2F5EF" }}>
+              <p style={{ fontFamily: "Geist, sans-serif", fontWeight: 800, fontSize: 20, color: "#1A2232" }}>
                 {fmtM(totalReceived)}
               </p>
-              <p style={{ fontSize: 12, color: "#7A9E85" }}>{entries.length} transaksi tercatat</p>
+              <p style={{ fontSize: 13, color: "#697586" }}>{entries.length} transaksi tercatat</p>
             </div>
           </div>
           <button onClick={() => { setEntryForm(blankEntry); setEntryFromOther(false); setEditEntryId(null); setShowFundForm(!showFundForm); }} style={{
             display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px",
-            borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#B8F53A",
-            color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif",
+            borderRadius: 8, fontSize: 14, fontWeight: 600, background: "#2D7A4F",
+            color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif",
           }}>
             <Plus size={14} /> Catat Dana Masuk
           </button>
@@ -319,8 +488,8 @@ function FinanceView() {
         {/* Add/Edit form */}
         {showFundForm && (
           <div style={{ ...card, marginBottom: 20, position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#B8F53A" }} />
-            <p style={{ fontSize: 12, color: "#B8F53A", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 18 }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#2D7A4F" }} />
+            <p style={{ fontSize: 13, color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 18 }}>
               {editEntryId ? "EDIT DANA MASUK" : "CATAT DANA MASUK BARU"}
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -355,13 +524,13 @@ function FinanceView() {
               </div>
               <div>
                 <label style={label12}>Tanggal Masuk *</label>
-                <input style={inp} value={entryForm.date} onChange={e => setEntryForm({ ...entryForm, date: e.target.value })} placeholder="15 Jan 2025" />
+                <DatePicker value={entryForm.date} onChange={v => setEntryForm({ ...entryForm, date: v })} placeholder="15 Jan 2025" />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
                 <label style={label12}>Jumlah (Rp Juta) *</label>
-                <input type="number" style={inp} value={entryForm.amountM || ""} onChange={e => setEntryForm({ ...entryForm, amountM: +e.target.value })} placeholder="500 = Rp 500 Juta" />
+                <input type="number" style={inp} value={entryForm.amountM || ""} onChange={e => setEntryForm({ ...entryForm, amountM: +e.target.value })} placeholder="500 = Rp 500.000.000" />
               </div>
               <div>
                 <label style={label12}>Round / Kategori</label>
@@ -376,11 +545,11 @@ function FinanceView() {
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={handleSaveEntry} disabled={!entryForm.from.trim() || !entryForm.amountM} style={{
-                padding: "9px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600,
-                background: entryForm.from.trim() && entryForm.amountM ? "#B8F53A" : "rgba(184,245,58,0.3)",
-                color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif",
+                padding: "9px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600,
+                background: entryForm.from.trim() && entryForm.amountM ? "#2D7A4F" : "rgba(45,122,79,0.25)",
+                color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif",
               }}>Simpan</button>
-              <button onClick={() => { setShowFundForm(false); setEditEntryId(null); }} style={{ padding: "9px 18px", borderRadius: 8, fontSize: 13, background: "transparent", border: "0.5px solid rgba(255,255,255,0.1)", color: "#7A9E85", cursor: "pointer" }}>Batal</button>
+              <button onClick={() => { setShowFundForm(false); setEditEntryId(null); }} style={{ padding: "9px 18px", borderRadius: 8, fontSize: 14, background: "transparent", border: "0.5px solid rgba(0,0,0,0.08)", color: "#697586", cursor: "pointer" }}>Batal</button>
             </div>
           </div>
         )}
@@ -388,7 +557,7 @@ function FinanceView() {
         {/* Timeline */}
         <div style={{ display: "flex", flexDirection: "column" }}>
           {entriesWithRunning.length === 0 && (
-            <div style={{ textAlign: "center", padding: "48px 0", color: "#7A9E85" }}>
+            <div style={{ textAlign: "center", padding: "48px 0", color: "#697586" }}>
               <DollarSign size={28} style={{ marginBottom: 10, opacity: 0.3 }} />
               <p style={{ fontSize: 14, fontWeight: 300 }}>Belum ada dana masuk dicatat.</p>
             </div>
@@ -399,50 +568,50 @@ function FinanceView() {
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 32, flexShrink: 0 }}>
                 <div style={{
                   width: 10, height: 10, borderRadius: "50%", flexShrink: 0, marginTop: 20,
-                  background: "#B8F53A", border: "2px solid #0B0F0E",
+                  background: "#2D7A4F", border: "2px solid #E4E8F2",
                   boxShadow: "0 0 0 1px rgba(184,245,58,0.4)",
                 }} />
                 {idx < entriesWithRunning.length - 1 && (
-                  <div style={{ width: 1, flex: 1, background: "rgba(255,255,255,0.07)", marginTop: 4 }} />
+                  <div style={{ width: 1, flex: 1, background: "rgba(0,0,0,0.06)", marginTop: 4 }} />
                 )}
               </div>
 
               {/* Card */}
               <div style={{
                 flex: 1, marginLeft: 12, marginBottom: 10,
-                background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)",
+                background: "#FFFFFF", border: "0.5px solid rgba(0,0,0,0.06)",
                 borderRadius: 10, padding: "14px 16px",
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16,
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
                     <span style={{
-                      fontSize: 10, padding: "1px 8px", borderRadius: 100,
-                      background: "rgba(184,245,58,0.08)", border: "0.5px solid rgba(184,245,58,0.2)",
-                      color: "#B8F53A", fontFamily: "JetBrains Mono, monospace",
+                      fontSize: 12, padding: "1px 8px", borderRadius: 100,
+                      background: "rgba(45,122,79,0.07)", border: "0.5px solid rgba(45,122,79,0.2)",
+                      color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace",
                     }}>{e.round}</span>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "JetBrains Mono, monospace" }}>{e.date}</span>
+                    <span style={{ fontSize: 13, color: "rgba(0,0,0,0.25)", fontFamily: "JetBrains Mono, monospace" }}>{e.date}</span>
                   </div>
-                  <p style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 600, marginBottom: 2 }}>{e.from}</p>
-                  {e.notes && <p style={{ fontSize: 12, color: "#7A9E85" }}>{e.notes}</p>}
+                  <p style={{ fontSize: 14, color: "#1A2232", fontWeight: 600, marginBottom: 2 }}>{e.from}</p>
+                  {e.notes && <p style={{ fontSize: 13, color: "#697586" }}>{e.notes}</p>}
                 </div>
 
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <p style={{ fontSize: 16, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#B8F53A" }}>
+                  <p style={{ fontSize: 16, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#2D7A4F" }}>
                     +{fmtM(e.amountM)}
                   </p>
-                  <p style={{ fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", marginTop: 2 }}>
+                  <p style={{ fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace", marginTop: 2 }}>
                     kumulatif: {fmtM(e.running)}
                   </p>
                 </div>
 
                 <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                  <button onClick={() => startEditEntry(e)} style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 6 }}
-                    onMouseOver={el => (el.currentTarget.style.color = "#B8F53A")} onMouseOut={el => (el.currentTarget.style.color = "#7A9E85")}>
+                  <button onClick={() => startEditEntry(e)} style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 6 }}
+                    onMouseOver={el => (el.currentTarget.style.color = "#2D7A4F")} onMouseOut={el => (el.currentTarget.style.color = "#697586")}>
                     <Edit2 size={13} />
                   </button>
-                  <button onClick={() => { deleteFundEntry(e.id); refreshEntries(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 6 }}
-                    onMouseOver={el => (el.currentTarget.style.color = "#ff6b6b")} onMouseOut={el => (el.currentTarget.style.color = "#7A9E85")}>
+                  <button onClick={() => { apiDeleteFundEntry(e.id).catch(() => deleteFundEntry(e.id)); refreshEntries(); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 6 }}
+                    onMouseOver={el => (el.currentTarget.style.color = "#ff6b6b")} onMouseOut={el => (el.currentTarget.style.color = "#697586")}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -466,8 +635,8 @@ function InvestorsView() {
   const [form, setForm] = useState(blankForm);
 
   const refresh = useCallback(() => {
-    setInvestors(getInvestors());
-    setFundEntries(getFundEntries());
+    apiGetInvestors().then(setInvestors).catch(() => setInvestors(getInvestors()));
+    apiGetFundEntries().then(setFundEntries).catch(() => setFundEntries(getFundEntries()));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -488,12 +657,13 @@ function InvestorsView() {
   const handleSave = () => {
     if (!form.name.trim()) return;
     const existing = editId ? investors.find(i => i.id === editId) : null;
-    saveInvestor({ ...form, amountM: existing?.amountM || 0, id: editId || Date.now().toString() });
+    const inv: InvestorRecord = { ...form, amountM: existing?.amountM || 0, id: editId || Date.now().toString() };
+    apiSaveInvestor(inv).catch(() => saveInvestor(inv));
     setForm(blankForm); setShowForm(false); setEditId(null);
     refresh();
   };
 
-  const handleDelete = (id: string) => { deleteInvestor(id); refresh(); };
+  const handleDelete = (id: string) => { apiDeleteInvestor(id).catch(() => deleteInvestor(id)); refresh(); };
 
   const roundGroup = investors.reduce<Record<string, InvestorRecord[]>>((acc, inv) => {
     if (!acc[inv.round]) acc[inv.round] = [];
@@ -506,16 +676,16 @@ function InvestorsView() {
       {/* Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 28 }}>
         {[
-          { label: "Total Investor", value: investors.length.toString(), color: "#B8F53A", icon: <Users size={16} /> },
-          { label: "Total Raised", value: fmtM(totalRaised), color: "#60C4F8", icon: <DollarSign size={16} /> },
-          { label: "Total Equity Diluted", value: `${totalEquity.toFixed(1)}%`, color: "#F8C660", icon: <TrendingUp size={16} /> },
+          { label: "Total Investor", value: investors.length.toString(), color: "#2D7A4F", icon: <Users size={16} /> },
+          { label: "Total Raised", value: fmtM(totalRaised), color: "#3E7CC8", icon: <DollarSign size={16} /> },
+          { label: "Total Equity Diluted", value: `${totalEquity.toFixed(1)}%`, color: "#B06820", icon: <TrendingUp size={16} /> },
         ].map(k => (
           <div key={k.label} style={{ background: hex(k.color, 0.05), border: `0.5px solid ${hex(k.color, 0.2)}`, borderRadius: 12, padding: "18px 20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <span style={{ color: k.color }}>{k.icon}</span>
-              <p style={{ fontSize: 11, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace" }}>{k.label.toUpperCase()}</p>
+              <p style={{ fontSize: 13, color: "#697586", fontFamily: "JetBrains Mono, monospace" }}>{k.label.toUpperCase()}</p>
             </div>
-            <p style={{ fontSize: 24, fontFamily: "Syne, sans-serif", fontWeight: 800, color: k.color }}>{k.value}</p>
+            <p style={{ fontSize: 24, fontFamily: "Geist, sans-serif", fontWeight: 800, color: k.color }}>{k.value}</p>
           </div>
         ))}
       </div>
@@ -524,8 +694,8 @@ function InvestorsView() {
       <div style={{ marginBottom: 20 }}>
         <button onClick={() => { setForm(blankForm); setEditId(null); setShowForm(!showForm); }} style={{
           display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px",
-          borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#B8F53A",
-          color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif",
+          borderRadius: 8, fontSize: 14, fontWeight: 600, background: "#2D7A4F",
+          color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif",
         }}>
           <Plus size={15} /> Tambah Investor
         </button>
@@ -534,8 +704,8 @@ function InvestorsView() {
       {/* Form */}
       {showForm && (
         <div style={{ ...card, marginBottom: 24, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#B8F53A" }} />
-          <p style={{ fontSize: 13, color: "#B8F53A", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 20 }}>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#2D7A4F" }} />
+          <p style={{ fontSize: 14, color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 20 }}>
             {editId ? "EDIT INVESTOR" : "INVESTOR BARU"}
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -566,10 +736,10 @@ function InvestorsView() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div><label style={label12}>Equity (%)</label><input type="number" step="0.1" style={inp} value={form.equity || ""} onChange={e => setForm({ ...form, equity: +e.target.value })} placeholder="5" /></div>
-            <div><label style={label12}>Tanggal</label><input style={inp} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} placeholder="Jan 2025" /></div>
+            <div><label style={label12}>Tanggal</label><DatePicker value={form.date} onChange={v => setForm({ ...form, date: v })} placeholder="Jan 2025" monthOnly /></div>
           </div>
-          <p style={{ fontSize: 11, color: "#7A9E85", marginBottom: 16 }}>
-            Nominal investasi dicatat dari menu <b style={{ color: "#B8F53A" }}>Dashboard Keuangan</b> melalui Catat Dana Masuk.
+          <p style={{ fontSize: 13, color: "#697586", marginBottom: 16 }}>
+            Nominal investasi dicatat dari menu <b style={{ color: "#2D7A4F" }}>Dashboard Keuangan</b> melalui Catat Dana Masuk.
           </p>
           <div style={{ marginBottom: 20 }}>
             <label style={label12}>Catatan</label>
@@ -577,11 +747,11 @@ function InvestorsView() {
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={handleSave} disabled={!form.name.trim()} style={{
-              padding: "10px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600,
-              background: form.name.trim() ? "#B8F53A" : "rgba(184,245,58,0.3)",
-              color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif",
+              padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600,
+              background: form.name.trim() ? "#2D7A4F" : "rgba(45,122,79,0.25)",
+              color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif",
             }}>Simpan</button>
-            <button onClick={() => { setShowForm(false); setEditId(null); }} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 13, background: "transparent", border: "0.5px solid rgba(255,255,255,0.1)", color: "#7A9E85", cursor: "pointer" }}>Batal</button>
+            <button onClick={() => { setShowForm(false); setEditId(null); }} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 14, background: "transparent", border: "0.5px solid rgba(0,0,0,0.08)", color: "#697586", cursor: "pointer" }}>Batal</button>
           </div>
         </div>
       )}
@@ -590,11 +760,11 @@ function InvestorsView() {
       {Object.entries(roundGroup).map(([round, invs]) => (
         <div key={round} style={{ marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <p style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 14, color: "#fff" }}>{round}</p>
-            <span style={{ fontSize: 11, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace" }}>
+            <p style={{ fontFamily: "Geist, sans-serif", fontWeight: 700, fontSize: 14, color: "#fff" }}>{round}</p>
+            <span style={{ fontSize: 13, color: "#697586", fontFamily: "JetBrains Mono, monospace" }}>
               {invs.length} investor · {fmtM(invs.reduce((s, i) => s + getInvestorAmount(i), 0))} · {invs.reduce((s, i) => s + i.equity, 0).toFixed(1)}% equity
             </span>
-            <div style={{ flex: 1, height: "0.5px", background: "rgba(255,255,255,0.07)" }} />
+            <div style={{ flex: 1, height: "0.5px", background: "rgba(0,0,0,0.06)" }} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {invs.map(inv => (
@@ -606,46 +776,46 @@ function InvestorsView() {
                     border: `0.5px solid ${hex(INV_TYPE_COLOR[inv.type], 0.3)}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: INV_TYPE_COLOR[inv.type], fontFamily: "Syne, sans-serif" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: INV_TYPE_COLOR[inv.type], fontFamily: "Geist, sans-serif" }}>
                       {inv.name.charAt(0)}
                     </span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
-                      <p style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 600 }}>{inv.name}</p>
+                      <p style={{ fontSize: 14, color: "#1A2232", fontWeight: 600 }}>{inv.name}</p>
                       {inv.company && inv.company !== "—" && (
-                        <span style={{ fontSize: 11, color: "#7A9E85" }}>· {inv.company}</span>
+                        <span style={{ fontSize: 13, color: "#697586" }}>· {inv.company}</span>
                       )}
                       <span style={{
-                        fontSize: 10, padding: "1px 7px", borderRadius: 100,
+                        fontSize: 12, padding: "1px 7px", borderRadius: 100,
                         background: hex(INV_TYPE_COLOR[inv.type], 0.1),
                         color: INV_TYPE_COLOR[inv.type],
                         border: `0.5px solid ${hex(INV_TYPE_COLOR[inv.type], 0.25)}`,
                         fontFamily: "JetBrains Mono, monospace",
                       }}>{INV_TYPE_LABEL[inv.type]}</span>
                     </div>
-                    <p style={{ fontSize: 12, color: "#7A9E85" }}>{inv.date}{inv.notes ? ` · ${inv.notes}` : ""}</p>
+                    <p style={{ fontSize: 13, color: "#697586" }}>{inv.date}{inv.notes ? ` · ${inv.notes}` : ""}</p>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 20, alignItems: "center", flexShrink: 0 }}>
                   <div style={{ textAlign: "right" }}>
-                    <p style={{ fontSize: 14, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#F2F5EF" }}>{fmtM(getInvestorAmount(inv))}</p>
-                    <p style={{ fontSize: 11, color: "#7A9E85" }}>{inv.equity}% equity</p>
+                    <p style={{ fontSize: 14, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#1A2232" }}>{fmtM(getInvestorAmount(inv))}</p>
+                    <p style={{ fontSize: 13, color: "#697586" }}>{inv.equity}% equity</p>
                   </div>
                   <span style={{
-                    fontSize: 10, padding: "3px 10px", borderRadius: 100,
+                    fontSize: 12, padding: "3px 10px", borderRadius: 100,
                     background: hex(INV_STATUS_COLOR[inv.status], 0.1),
                     color: INV_STATUS_COLOR[inv.status],
                     border: `0.5px solid ${hex(INV_STATUS_COLOR[inv.status], 0.3)}`,
                     fontFamily: "JetBrains Mono, monospace",
                   }}>{inv.status}</span>
                   <div style={{ display: "flex", gap: 4 }}>
-                    <button onClick={() => startEdit(inv)} style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 6 }}
-                      onMouseOver={e => (e.currentTarget.style.color = "#B8F53A")} onMouseOut={e => (e.currentTarget.style.color = "#7A9E85")}>
+                    <button onClick={() => startEdit(inv)} style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 6 }}
+                      onMouseOver={e => (e.currentTarget.style.color = "#2D7A4F")} onMouseOut={e => (e.currentTarget.style.color = "#697586")}>
                       <Edit2 size={13} />
                     </button>
-                    <button onClick={() => handleDelete(inv.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 6 }}
-                      onMouseOver={e => (e.currentTarget.style.color = "#ff6b6b")} onMouseOut={e => (e.currentTarget.style.color = "#7A9E85")}>
+                    <button onClick={() => handleDelete(inv.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 6 }}
+                      onMouseOver={e => (e.currentTarget.style.color = "#ff6b6b")} onMouseOut={e => (e.currentTarget.style.color = "#697586")}>
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -670,7 +840,7 @@ function NewsView() {
   const [form, setForm] = useState({ titleId: "", titleEn: "", excerptId: "", excerptEn: "", bodyId: "", bodyEn: "", category: CATEGORIES_ID[0], tag: "news" as "news" | "insight" | "featured" });
 
   const refresh = useCallback(() => {
-    setAdminNews(getAdminNews());
+    apiGetArticles().then(setAdminNews).catch(() => setAdminNews(getAdminNews()));
     setHiddenStaticNews(getHiddenIds(HIDDEN_STATIC_NEWS_KEY));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -708,7 +878,7 @@ function NewsView() {
     const staticOriginal = editingStaticArticleId
       ? staticArticles.find(a => String(a.id) === editingStaticArticleId)
       : null;
-    saveAdminArticle({
+    const article: AdminArticle = {
       id: editArticleId || Date.now().toString(),
       slug: existing?.slug || staticOriginal?.slug || slugify(form.titleId),
       category: { id: form.category, en: form.category }, tag: form.tag,
@@ -718,30 +888,35 @@ function NewsView() {
       excerpt: { id: form.excerptId, en: form.excerptEn || form.excerptId },
       body: form.bodyId ? [{ type: "paragraph" as const, text: { id: form.bodyId, en: form.bodyEn || form.bodyId } }] : [],
       published: true, source: "admin",
-    });
+    };
+    apiSaveArticle(article).catch(() => saveAdminArticle(article));
     if (editingStaticArticleId) hideStaticId(HIDDEN_STATIC_NEWS_KEY, editingStaticArticleId);
     resetForm();
     setShowForm(false); refresh();
   };
 
-  const togglePublish = (a: AdminArticle) => { saveAdminArticle({ ...a, published: !a.published }); refresh(); };
+  const togglePublish = (a: AdminArticle) => {
+    const updated = { ...a, published: !a.published };
+    apiSaveArticle(updated).catch(() => saveAdminArticle(updated));
+    refresh();
+  };
   const handleDeleteArticle = (a: (typeof allArticles)[number]) => {
     if (a.source === "static") hideStaticId(HIDDEN_STATIC_NEWS_KEY, String(a.id));
-    else deleteAdminArticle(a.id);
+    else { apiDeleteArticle(a.id).catch(() => deleteAdminArticle(a.id)); }
     refresh();
   };
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <button onClick={() => { resetForm(); setShowForm(!showForm); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#B8F53A", color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif" }}>
+        <button onClick={() => { resetForm(); setShowForm(!showForm); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: "#2D7A4F", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif" }}>
           <Plus size={15} /> Artikel Baru
         </button>
       </div>
       {showForm && (
         <div style={{ ...card, marginBottom: 24, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#B8F53A" }} />
-          <p style={{ fontSize: 13, color: "#B8F53A", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 20 }}>{editArticleId ? "EDIT ARTIKEL" : "ARTIKEL BARU"}</p>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#2D7A4F" }} />
+          <p style={{ fontSize: 14, color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 20 }}>{editArticleId ? "EDIT ARTIKEL" : "ARTIKEL BARU"}</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div><label style={label12}>Judul (ID) *</label><input style={inp} value={form.titleId} onChange={e => setForm({ ...form, titleId: e.target.value })} placeholder="Judul dalam Bahasa Indonesia" /></div>
             <div><label style={label12}>Title (EN)</label><input style={inp} value={form.titleEn} onChange={e => setForm({ ...form, titleEn: e.target.value })} placeholder="English title (optional)" /></div>
@@ -769,8 +944,8 @@ function NewsView() {
             <div><label style={label12}>Article Body (EN)</label><textarea rows={6} style={textarea} value={form.bodyEn} onChange={e => setForm({ ...form, bodyEn: e.target.value })} /></div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={handlePublish} disabled={!form.titleId.trim() || !form.excerptId.trim()} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: form.titleId.trim() && form.excerptId.trim() ? "#B8F53A" : "rgba(184,245,58,0.3)", color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif" }}>{editArticleId ? "Simpan Perubahan" : "Publish"}</button>
-            <button onClick={() => { setShowForm(false); resetForm(); }} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 13, background: "transparent", border: "0.5px solid rgba(255,255,255,0.1)", color: "#7A9E85", cursor: "pointer" }}>Batal</button>
+            <button onClick={handlePublish} disabled={!form.titleId.trim() || !form.excerptId.trim()} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: form.titleId.trim() && form.excerptId.trim() ? "#2D7A4F" : "rgba(45,122,79,0.25)", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif" }}>{editArticleId ? "Simpan Perubahan" : "Publish"}</button>
+            <button onClick={() => { setShowForm(false); resetForm(); }} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 14, background: "transparent", border: "0.5px solid rgba(0,0,0,0.08)", color: "#697586", cursor: "pointer" }}>Batal</button>
           </div>
         </div>
       )}
@@ -779,22 +954,22 @@ function NewsView() {
           <div key={a.id} style={{ ...card, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: "#B8F53A", background: "rgba(184,245,58,0.08)", border: "0.5px solid rgba(184,245,58,0.2)", borderRadius: 100, padding: "1px 8px" }}>{a.category.id}</span>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: "JetBrains Mono, monospace" }}>{a.source === "static" ? "STATIC" : "ADMIN"} · {a.tag.toUpperCase()}</span>
+                <span style={{ fontSize: 12, color: "#2D7A4F", background: "rgba(45,122,79,0.07)", border: "0.5px solid rgba(45,122,79,0.2)", borderRadius: 100, padding: "1px 8px" }}>{a.category.id}</span>
+                <span style={{ fontSize: 12, color: "rgba(0,0,0,0.2)", fontFamily: "JetBrains Mono, monospace" }}>{a.source === "static" ? "STATIC" : "ADMIN"} · {a.tag.toUpperCase()}</span>
               </div>
-              <p style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title.id}</p>
-              <p style={{ fontSize: 12, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace" }}>{a.date}</p>
+              <p style={{ fontSize: 14, color: "#1A2232", fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title.id}</p>
+              <p style={{ fontSize: 13, color: "#697586", fontFamily: "JetBrains Mono, monospace" }}>{a.date}</p>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: a.published ? "rgba(184,245,58,0.1)" : "rgba(255,255,255,0.04)", color: a.published ? "#B8F53A" : "#7A9E85", border: `0.5px solid ${a.published ? "rgba(184,245,58,0.3)" : "rgba(255,255,255,0.1)"}` }}>{a.published ? "Published" : "Draft"}</span>
-              <a href={`/news/${a.slug}`} target="_blank" rel="noreferrer" title="View artikel" style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 4 }}>
+              <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 100, background: a.published ? "rgba(45,122,79,0.08)" : "rgba(0,0,0,0.03)", color: a.published ? "#2D7A4F" : "#9AA5B4", border: `0.5px solid ${a.published ? "rgba(45,122,79,0.25)" : "rgba(0,0,0,0.08)"}` }}>{a.published ? "Published" : "Draft"}</span>
+              <a href={`/news/${a.slug}`} target="_blank" rel="noreferrer" title="View artikel" style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 4 }}>
                 <Eye size={15} />
               </a>
-              <button onClick={() => startEditArticle(a)} title="Edit artikel" style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 4 }}><Edit2 size={15} /></button>
+              <button onClick={() => startEditArticle(a)} title="Edit artikel" style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 4 }}><Edit2 size={15} /></button>
               {a.source === "admin" && (
-                <button onClick={() => togglePublish(a)} title={a.published ? "Set draft" : "Publish"} style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 4 }}>{a.published ? <EyeOff size={15} /> : <CheckCircle2 size={15} />}</button>
+                <button onClick={() => togglePublish(a)} title={a.published ? "Set draft" : "Publish"} style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 4 }}>{a.published ? <EyeOff size={15} /> : <CheckCircle2 size={15} />}</button>
               )}
-              <button onClick={() => handleDeleteArticle(a)} title="Delete artikel" style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 4 }} onMouseOver={e => (e.currentTarget.style.color = "#ff6b6b")} onMouseOut={e => (e.currentTarget.style.color = "#7A9E85")}><Trash2 size={15} /></button>
+              <button onClick={() => handleDeleteArticle(a)} title="Delete artikel" style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 4 }} onMouseOver={e => (e.currentTarget.style.color = "#ff6b6b")} onMouseOut={e => (e.currentTarget.style.color = "#697586")}><Trash2 size={15} /></button>
             </div>
           </div>
         ))}
@@ -823,7 +998,7 @@ function CareersView() {
   const [form, setForm] = useState({ title: "", dept: DEPTS_ID[0], level: "Mid", location: "Jakarta, Indonesia", descId: "", descEn: "", skills: "" });
 
   const refresh = useCallback(() => {
-    setAdminJobs(getAdminJobs());
+    apiGetJobs().then(setAdminJobs).catch(() => setAdminJobs(getAdminJobs()));
     setHiddenStaticJobs(getHiddenIds(HIDDEN_STATIC_JOBS_KEY));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -853,29 +1028,34 @@ function CareersView() {
   const handleAdd = () => {
     if (!form.title.trim()) return;
     const existing = editJobId ? adminJobs.find(j => j.id === editJobId) : null;
-    saveAdminJob({ id: editJobId || Date.now().toString(), title: form.title, dept: { id: form.dept, en: form.dept }, type: { id: "Penuh Waktu", en: "Full-time" }, level: { id: form.level, en: form.level }, location: form.location, desc: { id: form.descId, en: form.descEn || form.descId }, skills: form.skills.split(",").map(s => s.trim()).filter(Boolean), active: existing?.active ?? true, source: "admin" });
+    const job: AdminJob = { id: editJobId || Date.now().toString(), title: form.title, dept: { id: form.dept, en: form.dept }, type: { id: "Penuh Waktu", en: "Full-time" }, level: { id: form.level, en: form.level }, location: form.location, desc: { id: form.descId, en: form.descEn || form.descId }, skills: form.skills.split(",").map(s => s.trim()).filter(Boolean), active: existing?.active ?? true, source: "admin" };
+    apiSaveJob(job).catch(() => saveAdminJob(job));
     if (editingStaticJobId) hideStaticId(HIDDEN_STATIC_JOBS_KEY, editingStaticJobId);
     resetJobForm();
     setShowForm(false); refresh();
   };
-  const toggleActive = (j: AdminJob) => { saveAdminJob({ ...j, active: !j.active }); refresh(); };
+  const toggleActive = (j: AdminJob) => {
+    const updated = { ...j, active: !j.active };
+    apiSaveJob(updated).catch(() => saveAdminJob(updated));
+    refresh();
+  };
   const handleDeleteJob = (j: (typeof allJobs)[number]) => {
     if (j.source === "static") hideStaticId(HIDDEN_STATIC_JOBS_KEY, j.id);
-    else deleteAdminJob(j.id);
+    else { apiDeleteJob(j.id).catch(() => deleteAdminJob(j.id)); }
     refresh();
   };
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <button onClick={() => { resetJobForm(); setShowForm(!showForm); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#B8F53A", color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif" }}>
+        <button onClick={() => { resetJobForm(); setShowForm(!showForm); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: "#2D7A4F", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif" }}>
           <Plus size={15} /> Posisi Baru
         </button>
       </div>
       {showForm && (
         <div style={{ ...card, marginBottom: 24, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#B8F53A" }} />
-          <p style={{ fontSize: 13, color: "#B8F53A", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 20 }}>{editJobId ? "EDIT POSISI" : "POSISI BARU"}</p>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#2D7A4F" }} />
+          <p style={{ fontSize: 14, color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 20 }}>{editJobId ? "EDIT POSISI" : "POSISI BARU"}</p>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div><label style={label12}>Judul Posisi *</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Senior Backend Engineer" /></div>
             <div><label style={label12}>Departemen</label><select style={{ ...inp, appearance: "none" as const }} value={form.dept} onChange={e => setForm({ ...form, dept: e.target.value })}>{DEPTS_ID.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
@@ -888,8 +1068,8 @@ function CareersView() {
           </div>
           <div style={{ marginBottom: 20 }}><label style={label12}>Skills (pisahkan koma)</label><input style={inp} value={form.skills} onChange={e => setForm({ ...form, skills: e.target.value })} placeholder="React, Node.js, ..." /></div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={handleAdd} disabled={!form.title.trim()} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: form.title.trim() ? "#B8F53A" : "rgba(184,245,58,0.3)", color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif" }}>{editJobId ? "Simpan Perubahan" : "Tambah"}</button>
-            <button onClick={() => { setShowForm(false); resetJobForm(); }} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 13, background: "transparent", border: "0.5px solid rgba(255,255,255,0.1)", color: "#7A9E85", cursor: "pointer" }}>Batal</button>
+            <button onClick={handleAdd} disabled={!form.title.trim()} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: form.title.trim() ? "#2D7A4F" : "rgba(45,122,79,0.25)", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif" }}>{editJobId ? "Simpan Perubahan" : "Tambah"}</button>
+            <button onClick={() => { setShowForm(false); resetJobForm(); }} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 14, background: "transparent", border: "0.5px solid rgba(0,0,0,0.08)", color: "#697586", cursor: "pointer" }}>Batal</button>
           </div>
         </div>
       )}
@@ -898,26 +1078,26 @@ function CareersView() {
           <div key={j.id} style={{ ...card, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: "#B8F53A", background: "rgba(184,245,58,0.08)", border: "0.5px solid rgba(184,245,58,0.2)", borderRadius: 100, padding: "1px 8px" }}>{j.dept.id}</span>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: "JetBrains Mono, monospace" }}>{j.source === "static" ? "STATIC" : "ADMIN"} · {j.level.id} · {j.location}</span>
+                <span style={{ fontSize: 12, color: "#2D7A4F", background: "rgba(45,122,79,0.07)", border: "0.5px solid rgba(45,122,79,0.2)", borderRadius: 100, padding: "1px 8px" }}>{j.dept.id}</span>
+                <span style={{ fontSize: 12, color: "rgba(0,0,0,0.2)", fontFamily: "JetBrains Mono, monospace" }}>{j.source === "static" ? "STATIC" : "ADMIN"} · {j.level.id} · {j.location}</span>
               </div>
-              <p style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.title}</p>
+              <p style={{ fontSize: 14, color: "#1A2232", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.title}</p>
               {j.skills.length > 0 && (
                 <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
-                  {j.skills.slice(0, 4).map(s => <span key={s} style={{ fontSize: 10, color: "#7A9E85", background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 4, padding: "1px 7px", fontFamily: "JetBrains Mono, monospace" }}>{s}</span>)}
+                  {j.skills.slice(0, 4).map(s => <span key={s} style={{ fontSize: 12, color: "#697586", background: "rgba(0,0,0,0.03)", border: "0.5px solid rgba(0,0,0,0.06)", borderRadius: 4, padding: "1px 7px", fontFamily: "JetBrains Mono, monospace" }}>{s}</span>)}
                 </div>
               )}
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 100, background: j.active ? "rgba(184,245,58,0.1)" : "rgba(255,255,255,0.04)", color: j.active ? "#B8F53A" : "#7A9E85", border: `0.5px solid ${j.active ? "rgba(184,245,58,0.3)" : "rgba(255,255,255,0.1)"}` }}>{j.active ? "Active" : "Inactive"}</span>
-              <a href="/careers" target="_blank" rel="noreferrer" title="View careers" style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 4 }}>
+              <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 100, background: j.active ? "rgba(45,122,79,0.08)" : "rgba(0,0,0,0.03)", color: j.active ? "#2D7A4F" : "#9AA5B4", border: `0.5px solid ${j.active ? "rgba(45,122,79,0.25)" : "rgba(0,0,0,0.08)"}` }}>{j.active ? "Active" : "Inactive"}</span>
+              <a href="/careers" target="_blank" rel="noreferrer" title="View careers" style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 4 }}>
                 <Eye size={15} />
               </a>
-              <button onClick={() => startEditJob(j)} title="Edit posisi" style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 4 }}><Edit2 size={15} /></button>
+              <button onClick={() => startEditJob(j)} title="Edit posisi" style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 4 }}><Edit2 size={15} /></button>
               {j.source === "admin" && (
-                <button onClick={() => toggleActive(j)} title={j.active ? "Nonaktifkan" : "Aktifkan"} style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 4 }}>{j.active ? <EyeOff size={15} /> : <CheckCircle2 size={15} />}</button>
+                <button onClick={() => toggleActive(j)} title={j.active ? "Nonaktifkan" : "Aktifkan"} style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 4 }}>{j.active ? <EyeOff size={15} /> : <CheckCircle2 size={15} />}</button>
               )}
-              <button onClick={() => handleDeleteJob(j)} title="Delete posisi" style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 4 }} onMouseOver={e => (e.currentTarget.style.color = "#ff6b6b")} onMouseOut={e => (e.currentTarget.style.color = "#7A9E85")}><Trash2 size={15} /></button>
+              <button onClick={() => handleDeleteJob(j)} title="Delete posisi" style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 4 }} onMouseOver={e => (e.currentTarget.style.color = "#ff6b6b")} onMouseOut={e => (e.currentTarget.style.color = "#697586")}><Trash2 size={15} /></button>
             </div>
           </div>
         ))}
@@ -929,19 +1109,21 @@ function CareersView() {
 /* ═══════════════════════════════════════════════════════ */
 /* ─── Journal View ────────────────────────────────────── */
 function JournalView() {
-  const [accounts, setAccounts] = useState<ChartAccount[]>(() => getChartAccounts());
-  const [entries, setEntries] = useState<JournalEntry[]>(() => getJournalEntries());
+  const [accounts, setAccounts] = useState<ChartAccount[]>([]);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
   interface LineForm { accountId: string; debit: string; credit: string; }
   const blankLine: LineForm = { accountId: "", debit: "", credit: "" };
-  const [form, setForm] = useState({ date: "", description: "" });
+  const [form, setForm] = useState({ date: "", description: "", contactId: "" });
   const [lines, setLines] = useState<LineForm[]>([blankLine, blankLine]);
+  const [vendors, setVendors] = useState<VendorRecord[]>([]);
 
   const refresh = useCallback(() => {
-    setAccounts(getChartAccounts());
-    setEntries(getJournalEntries());
+    apiGetChartAccounts().then(setAccounts).catch(() => setAccounts(getChartAccounts()));
+    apiGetJournalEntries().then(setEntries).catch(() => setEntries(getJournalEntries()));
+    apiGetVendors().then(setVendors).catch(() => setVendors(getVendors()));
   }, []);
 
   const totalD = lines.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0);
@@ -954,14 +1136,16 @@ function JournalView() {
       .filter(l => l.accountId && (parseFloat(l.debit) > 0 || parseFloat(l.credit) > 0))
       .map(l => ({ accountId: l.accountId, debit: parseFloat(l.debit) || 0, credit: parseFloat(l.credit) || 0 }));
     const nextNum = entries.length + 1;
-    saveJournalEntry({
+    const je: JournalEntry = {
       id: Date.now().toString(),
       ref: `JE-${new Date().getFullYear()}-${String(nextNum).padStart(3, "0")}`,
       date: form.date,
       description: form.description,
       lines: jeLines,
-    });
-    setForm({ date: "", description: "" });
+      ...(form.contactId ? { contactId: form.contactId } : {}),
+    };
+    apiSaveJournalEntry(je).catch(() => saveJournalEntry(je));
+    setForm({ date: "", description: "", contactId: "" });
     setLines([blankLine, blankLine]);
     setShowForm(false);
     refresh();
@@ -970,25 +1154,41 @@ function JournalView() {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <button onClick={() => { setForm({ date: "", description: "" }); setLines([blankLine, blankLine]); setShowForm(!showForm); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#B8F53A", color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif" }}>
+        <button onClick={() => { setForm({ date: "", description: "", contactId: "" }); setLines([blankLine, blankLine]); setShowForm(!showForm); }} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: "#2D7A4F", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif" }}>
           <Plus size={15} /> Jurnal Baru
         </button>
       </div>
 
       {showForm && (
         <div style={{ ...card, marginBottom: 24, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#B8F53A" }} />
-          <p style={{ fontSize: 12, color: "#B8F53A", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 18 }}>JURNAL BARU</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12, marginBottom: 16 }}>
-            <div><label style={label12}>Tanggal *</label><input style={inp} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} placeholder="15 Jan 2026" /></div>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#2D7A4F" }} />
+          <p style={{ fontSize: 13, color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 18 }}>JURNAL BARU</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div><label style={label12}>Tanggal *</label><DatePicker value={form.date} onChange={v => setForm({ ...form, date: v })} placeholder="15 Jan 2026" /></div>
             <div><label style={label12}>Keterangan *</label><input style={inp} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Deskripsi transaksi" /></div>
+            <div>
+              <label style={label12}>Vendor / Customer</label>
+              <select style={{ ...inp, appearance: "none" as const }} value={form.contactId}
+                onChange={e => setForm({ ...form, contactId: e.target.value })}>
+                <option value="">— Pilih (opsional) —</option>
+                {["vendor","customer","both"].map(t => {
+                  const group = vendors.filter(v => v.type === t);
+                  if (group.length === 0) return null;
+                  return (
+                    <optgroup key={t} label={CONTACT_TYPE_LABEL[t as ContactType]}>
+                      {group.map(v => <option key={v.id} value={v.id}>{v.code ? `${v.code} — ` : ""}{v.name}</option>)}
+                    </optgroup>
+                  );
+                })}
+              </select>
+            </div>
           </div>
 
           <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 140px 32px", gap: 8, marginBottom: 6, padding: "0 4px" }}>
-              <p style={{ fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace" }}>AKUN</p>
-              <p style={{ fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", textAlign: "right" }}>DEBIT (Jt)</p>
-              <p style={{ fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", textAlign: "right" }}>KREDIT (Jt)</p>
+              <p style={{ fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace" }}>AKUN</p>
+              <p style={{ fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace", textAlign: "right" }}>DEBIT (Rp)</p>
+              <p style={{ fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace", textAlign: "right" }}>KREDIT (Rp)</p>
               <span />
             </div>
             {lines.map((l, i) => (
@@ -1011,69 +1211,73 @@ function JournalView() {
                   onChange={e => setLines(lines.map((x, j) => j === i ? { ...x, credit: e.target.value, debit: "" } : x))}
                   placeholder="0" min="0" />
                 <button onClick={() => lines.length > 2 && setLines(lines.filter((_, j) => j !== i))}
-                  style={{ background: "none", border: "none", cursor: lines.length > 2 ? "pointer" : "default", color: lines.length > 2 ? "#7A9E85" : "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  style={{ background: "none", border: "none", cursor: lines.length > 2 ? "pointer" : "default", color: lines.length > 2 ? "#9AA5B4" : "rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <MinusCircle size={14} />
                 </button>
               </div>
             ))}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 140px 32px", gap: 8, padding: "10px 4px 4px", borderTop: "0.5px solid rgba(255,255,255,0.07)", marginTop: 4 }}>
-              <p style={{ fontSize: 12, color: "#7A9E85" }}>Total</p>
-              <p style={{ fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: totalD > 0 ? "#F2F5EF" : "#7A9E85", textAlign: "right" }}>{totalD.toLocaleString("id-ID", { maximumFractionDigits: 1 })}</p>
-              <p style={{ fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: totalC > 0 ? "#F2F5EF" : "#7A9E85", textAlign: "right" }}>{totalC.toLocaleString("id-ID", { maximumFractionDigits: 1 })}</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 140px 32px", gap: 8, padding: "10px 4px 4px", borderTop: "0.5px solid rgba(0,0,0,0.06)", marginTop: 4 }}>
+              <p style={{ fontSize: 13, color: "#697586" }}>Total</p>
+              <p style={{ fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: totalD > 0 ? "#1A2232" : "#9AA5B4", textAlign: "right" }}>{(totalD * 1_000_000).toLocaleString("id-ID")}</p>
+              <p style={{ fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: totalC > 0 ? "#1A2232" : "#9AA5B4", textAlign: "right" }}>{(totalC * 1_000_000).toLocaleString("id-ID")}</p>
               <span />
             </div>
             <div style={{ padding: "6px 4px", display: "flex", alignItems: "center", gap: 8 }}>
               {totalD > 0 && (balanced
-                ? <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#B8F53A" }}><CheckCircle2 size={13} /> Jurnal seimbang</span>
-                : <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#F86060" }}><AlertCircle size={13} /> Selisih: {Math.abs(totalD - totalC).toFixed(1)} Jt</span>
+                ? <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#2D7A4F" }}><CheckCircle2 size={13} /> Jurnal seimbang</span>
+                : <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#C03C3C" }}><AlertCircle size={13} /> Selisih: Rp {(Math.abs(totalD - totalC) * 1_000_000).toLocaleString("id-ID")}</span>
               )}
             </div>
-            <button onClick={() => setLines([...lines, blankLine])} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 6, fontSize: 12, background: "transparent", border: "0.5px dashed rgba(255,255,255,0.15)", color: "#7A9E85", cursor: "pointer", marginTop: 4 }}>
+            <button onClick={() => setLines([...lines, blankLine])} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 6, fontSize: 13, background: "transparent", border: "0.5px dashed rgba(0,0,0,0.1)", color: "#697586", cursor: "pointer", marginTop: 4 }}>
               <Plus size={11} /> Tambah Baris
             </button>
           </div>
 
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-            <button onClick={handleSave} disabled={!balanced || !form.date || !form.description} style={{ padding: "9px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: balanced && form.date && form.description ? "#B8F53A" : "rgba(184,245,58,0.25)", color: "#0D2B1E", border: "none", cursor: "pointer", fontFamily: "Syne, sans-serif" }}>Simpan Jurnal</button>
-            <button onClick={() => setShowForm(false)} style={{ padding: "9px 18px", borderRadius: 8, fontSize: 13, background: "transparent", border: "0.5px solid rgba(255,255,255,0.1)", color: "#7A9E85", cursor: "pointer" }}>Batal</button>
+            <button onClick={handleSave} disabled={!balanced || !form.date || !form.description} style={{ padding: "9px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: balanced && form.date && form.description ? "#2D7A4F" : "rgba(45,122,79,0.25)", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif" }}>Simpan Jurnal</button>
+            <button onClick={() => setShowForm(false)} style={{ padding: "9px 18px", borderRadius: 8, fontSize: 14, background: "transparent", border: "0.5px solid rgba(0,0,0,0.08)", color: "#697586", cursor: "pointer" }}>Batal</button>
           </div>
         </div>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <p style={{ fontSize: 12, color: "#7A9E85", marginBottom: 4 }}>{entries.length} entri jurnal</p>
+        <p style={{ fontSize: 13, color: "#697586", marginBottom: 4 }}>{entries.length} entri jurnal</p>
         {entries.map(je => (
-          <div key={je.id} style={{ ...card, cursor: "pointer", borderLeft: "3px solid rgba(184,245,58,0.3)" }}
+          <div key={je.id} style={{ ...card, cursor: "pointer", borderLeft: "3px solid rgba(45,122,79,0.25)" }}
             onClick={() => setExpanded(expanded === je.id ? null : je.id)}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 5 }}>
-                  <span style={{ fontSize: 10, color: "#B8F53A", fontFamily: "JetBrains Mono, monospace", background: "rgba(184,245,58,0.08)", border: "0.5px solid rgba(184,245,58,0.2)", borderRadius: 4, padding: "1px 8px" }}>{je.ref}</span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "JetBrains Mono, monospace" }}>{je.date}</span>
+                  <span style={{ fontSize: 12, color: "#2D7A4F", fontFamily: "JetBrains Mono, monospace", background: "rgba(45,122,79,0.07)", border: "0.5px solid rgba(45,122,79,0.2)", borderRadius: 4, padding: "1px 8px" }}>{je.ref}</span>
+                  <span style={{ fontSize: 13, color: "rgba(0,0,0,0.25)", fontFamily: "JetBrains Mono, monospace" }}>{je.date}</span>
                 </div>
-                <p style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 500 }}>{je.description}</p>
+                <p style={{ fontSize: 14, color: "#1A2232", fontWeight: 500 }}>{je.description}</p>
+                {je.contactId && (() => {
+                  const c = vendors.find(v => v.id === je.contactId);
+                  return c ? <span style={{ fontSize: 12, color: CONTACT_TYPE_COLOR[c.type], background: hex(CONTACT_TYPE_COLOR[c.type], 0.08), borderRadius: 4, padding: "1px 7px", marginTop: 3, display: "inline-block" }}>{c.name}</span> : null;
+                })()}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: 12, flexShrink: 0 }}>
-                <p style={{ fontSize: 13, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace" }}>
+                <p style={{ fontSize: 14, color: "#697586", fontFamily: "JetBrains Mono, monospace" }}>
                   {fmtM(je.lines.reduce((s, l) => s + l.debit, 0))}
                 </p>
-                <button onClick={ev => { ev.stopPropagation(); deleteJournalEntry(je.id); refresh(); }}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#7A9E85", display: "flex", padding: 6 }}
+                <button onClick={ev => { ev.stopPropagation(); apiDeleteJournalEntry(je.id).catch(() => deleteJournalEntry(je.id)); refresh(); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#697586", display: "flex", padding: 6 }}
                   onMouseOver={e => (e.currentTarget.style.color = "#ff6b6b")}
-                  onMouseOut={e => (e.currentTarget.style.color = "#7A9E85")}>
+                  onMouseOut={e => (e.currentTarget.style.color = "#697586")}>
                   <Trash2 size={13} />
                 </button>
-                {expanded === je.id ? <ChevronUp size={15} color="#7A9E85" /> : <ChevronDown size={15} color="#7A9E85" />}
+                {expanded === je.id ? <ChevronUp size={15} color="#9AA5B4" /> : <ChevronDown size={15} color="#9AA5B4" />}
               </div>
             </div>
             {expanded === je.id && (
-              <div style={{ marginTop: 14, paddingTop: 14, borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: "0.5px solid rgba(0,0,0,0.05)" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
-                      {[["left","AKUN"], ["right","DEBIT (Jt)"], ["right","KREDIT (Jt)"]].map(([align, label]) => (
-                        <th key={label} style={{ textAlign: align as "left" | "right", fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", padding: "4px 8px", fontWeight: 400 }}>{label}</th>
+                      {[["left","AKUN"], ["right","DEBIT (Rp)"], ["right","KREDIT (Rp)"]].map(([align, label]) => (
+                        <th key={label} style={{ textAlign: align as "left" | "right", fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace", padding: "4px 8px", fontWeight: 400 }}>{label}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1081,16 +1285,16 @@ function JournalView() {
                     {je.lines.map((l, i) => {
                       const acc = accounts.find(a => a.id === l.accountId);
                       return (
-                        <tr key={i} style={{ borderTop: "0.5px solid rgba(255,255,255,0.04)" }}>
+                        <tr key={i} style={{ borderTop: "0.5px solid rgba(0,0,0,0.03)" }}>
                           <td style={{ padding: "6px 8px" }}>
-                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: "JetBrains Mono, monospace", marginRight: 8 }}>{acc?.code}</span>
-                            <span style={{ fontSize: 13, color: l.debit > 0 ? "#F2F5EF" : "#7A9E85", paddingLeft: l.debit === 0 ? 0 : 0 }}>{acc?.name || l.accountId}</span>
+                            <span style={{ fontSize: 13, color: "rgba(0,0,0,0.3)", fontFamily: "JetBrains Mono, monospace", marginRight: 8 }}>{acc?.code}</span>
+                            <span style={{ fontSize: 14, color: l.debit > 0 ? "#1A2232" : "#9AA5B4", paddingLeft: l.debit === 0 ? 0 : 0 }}>{acc?.name || l.accountId}</span>
                           </td>
-                          <td style={{ textAlign: "right", padding: "6px 8px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: l.debit > 0 ? "#F2F5EF" : "rgba(255,255,255,0.2)" }}>
-                            {l.debit > 0 ? l.debit.toLocaleString("id-ID") : "—"}
+                          <td style={{ textAlign: "right", padding: "6px 8px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: l.debit > 0 ? "#1A2232" : "rgba(0,0,0,0.12)" }}>
+                            {l.debit > 0 ? (l.debit * 1_000_000).toLocaleString("id-ID") : "—"}
                           </td>
-                          <td style={{ textAlign: "right", padding: "6px 8px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: l.credit > 0 ? "#7A9E85" : "rgba(255,255,255,0.2)" }}>
-                            {l.credit > 0 ? l.credit.toLocaleString("id-ID") : "—"}
+                          <td style={{ textAlign: "right", padding: "6px 8px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: l.credit > 0 ? "#9AA5B4" : "rgba(0,0,0,0.12)" }}>
+                            {l.credit > 0 ? (l.credit * 1_000_000).toLocaleString("id-ID") : "—"}
                           </td>
                         </tr>
                       );
@@ -1109,15 +1313,15 @@ function JournalView() {
 /* ═══════════════════════════════════════════════════════ */
 /* ─── Ledger View ─────────────────────────────────────── */
 function LedgerView() {
-  const [accounts, setAccounts] = useState<ChartAccount[]>(() => getChartAccounts());
-  const [entries, setEntries] = useState<JournalEntry[]>(() => getJournalEntries());
+  const [accounts, setAccounts] = useState<ChartAccount[]>([]);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selType, setSelType] = useState<AccountType | "all">("all");
-  const [selAccId, setSelAccId] = useState<string>(() => getChartAccounts()[0]?.id || "");
+  const [selAccId, setSelAccId] = useState<string>("");
 
   const refresh = useCallback(() => {
-    setAccounts(getChartAccounts());
-    setEntries(getJournalEntries());
-  }, []);
+    apiGetChartAccounts().then(accs => { setAccounts(accs); if (!selAccId && accs.length) setSelAccId(accs[0].id); }).catch(() => { const accs = getChartAccounts(); setAccounts(accs); if (!selAccId && accs.length) setSelAccId(accs[0].id); });
+    apiGetJournalEntries().then(setEntries).catch(() => setEntries(getJournalEntries()));
+  }, [selAccId]);
   useEffect(() => { refresh(); }, [refresh]);
 
   const ledger = computeLedger(accounts, entries);
@@ -1138,10 +1342,10 @@ function LedgerView() {
       <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
         {(["all", ...ACC_TYPE_ORDER] as (AccountType | "all")[]).map(type => (
           <button key={type} onClick={() => setSelType(type)} style={{
-            padding: "5px 12px", borderRadius: 20, fontSize: 11, fontFamily: "JetBrains Mono, monospace",
+            padding: "5px 12px", borderRadius: 20, fontSize: 13, fontFamily: "JetBrains Mono, monospace",
             cursor: "pointer", border: "none",
-            background: selType === type ? (type === "all" ? "#B8F53A" : hex(ACC_TYPE_COLOR[type], 0.18)) : "rgba(255,255,255,0.04)",
-            color: selType === type ? (type === "all" ? "#0D2B1E" : ACC_TYPE_COLOR[type]) : "#7A9E85",
+            background: selType === type ? (type === "all" ? "#2D7A4F" : hex(ACC_TYPE_COLOR[type], 0.18)) : "rgba(0,0,0,0.03)",
+            color: selType === type ? (type === "all" ? "#ffffff" : ACC_TYPE_COLOR[type]) : "#9AA5B4",
           }}>
             {type === "all" ? "SEMUA" : ACC_TYPE_LABEL[type].toUpperCase()}
           </button>
@@ -1149,23 +1353,23 @@ function LedgerView() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, alignItems: "start" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, background: "#070D09", borderRadius: 10, padding: 8, maxHeight: "60vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, background: "#F4F6FB", borderRadius: 10, padding: 8, maxHeight: "60vh", overflowY: "auto", border: "1px solid #E4E8F2" }}>
           {filteredAccounts.map(a => {
             const active = selAccId === a.id;
             return (
               <button key={a.id} onClick={() => setSelAccId(a.id)} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "9px 12px", borderRadius: 7, border: "none", cursor: "pointer", textAlign: "left",
-                background: active ? "rgba(184,245,58,0.08)" : "transparent",
+                background: active ? "rgba(45,122,79,0.07)" : "transparent",
               }}
-                onMouseOver={e => { if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
+                onMouseOver={e => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.02)"; }}
                 onMouseOut={e => { if (!active) e.currentTarget.style.background = "transparent"; }}>
                 <div>
-                  <p style={{ fontSize: 10, color: active ? ACC_TYPE_COLOR[a.type] : "#7A9E85", fontFamily: "JetBrains Mono, monospace", marginBottom: 2 }}>{a.code}</p>
-                  <p style={{ fontSize: 12, color: active ? "#F2F5EF" : "#7A9E85", fontWeight: active ? 600 : 400 }}>{a.name}</p>
+                  <p style={{ fontSize: 12, color: active ? ACC_TYPE_COLOR[a.type] : "#9AA5B4", fontFamily: "JetBrains Mono, monospace", marginBottom: 2 }}>{a.code}</p>
+                  <p style={{ fontSize: 13, color: active ? "#1A2232" : "#9AA5B4", fontWeight: active ? 600 : 400 }}>{a.name}</p>
                 </div>
-                <p style={{ fontSize: 12, fontFamily: "JetBrains Mono, monospace", color: a.balance !== 0 ? (active ? "#B8F53A" : "#F2F5EF") : "#7A9E85", marginLeft: 8 }}>
-                  {a.balance !== 0 ? a.balance.toLocaleString("id-ID") : "—"}
+                <p style={{ fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: a.balance !== 0 ? (active ? "#2D7A4F" : "#1A2232") : "#9AA5B4", marginLeft: 8 }}>
+                  {a.balance !== 0 ? (a.balance * 1_000_000).toLocaleString("id-ID") : "—"}
                 </p>
               </button>
             );
@@ -1177,37 +1381,37 @@ function LedgerView() {
             <div style={{ ...card, marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                  <p style={{ fontSize: 10, color: ACC_TYPE_COLOR[selAcc.type], fontFamily: "JetBrains Mono, monospace", marginBottom: 4 }}>{selAcc.code} · {ACC_TYPE_LABEL[selAcc.type].toUpperCase()}</p>
-                  <p style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 17, color: "#F2F5EF" }}>{selAcc.name}</p>
+                  <p style={{ fontSize: 12, color: ACC_TYPE_COLOR[selAcc.type], fontFamily: "JetBrains Mono, monospace", marginBottom: 4 }}>{selAcc.code} · {ACC_TYPE_LABEL[selAcc.type].toUpperCase()}</p>
+                  <p style={{ fontFamily: "Geist, sans-serif", fontWeight: 700, fontSize: 17, color: "#1A2232" }}>{selAcc.name}</p>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <p style={{ fontSize: 10, color: "#7A9E85", marginBottom: 4 }}>Saldo Normal: {selAcc.normalBalance === "debit" ? "Debit" : "Kredit"}</p>
-                  <p style={{ fontSize: 22, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#B8F53A" }}>{fmtM(selAcc.balance)}</p>
+                  <p style={{ fontSize: 12, color: "#697586", marginBottom: 4 }}>Saldo Normal: {selAcc.normalBalance === "debit" ? "Debit" : "Kredit"}</p>
+                  <p style={{ fontSize: 22, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#2D7A4F" }}>{fmtM(selAcc.balance)}</p>
                 </div>
               </div>
             </div>
             {txWithBal.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#7A9E85" }}>
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#697586" }}>
                 <BookOpen size={28} style={{ marginBottom: 8, opacity: 0.3 }} />
                 <p style={{ fontSize: 14, fontWeight: 300 }}>Belum ada transaksi.</p>
               </div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ borderBottom: "0.5px solid rgba(255,255,255,0.08)" }}>
+                  <tr style={{ borderBottom: "0.5px solid rgba(0,0,0,0.06)" }}>
                     {[["left","TANGGAL"],["left","KETERANGAN"],["right","DEBIT"],["right","KREDIT"],["right","SALDO"]].map(([align, lbl]) => (
-                      <th key={lbl} style={{ textAlign: align as "left"|"right", padding: "8px 12px", fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", fontWeight: 400 }}>{lbl}</th>
+                      <th key={lbl} style={{ textAlign: align as "left"|"right", padding: "8px 12px", fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace", fontWeight: 400 }}>{lbl}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {txWithBal.map((t, i) => (
-                    <tr key={i} style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)" }}>
-                      <td style={{ padding: "8px 12px", fontSize: 12, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", whiteSpace: "nowrap" }}>{t.je.date}</td>
-                      <td style={{ padding: "8px 12px", fontSize: 13, color: "#F2F5EF" }}>{t.je.description}</td>
-                      <td style={{ textAlign: "right", padding: "8px 12px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: t.line.debit > 0 ? "#F2F5EF" : "rgba(255,255,255,0.15)" }}>{t.line.debit > 0 ? t.line.debit.toLocaleString("id-ID") : "—"}</td>
-                      <td style={{ textAlign: "right", padding: "8px 12px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: t.line.credit > 0 ? "#7A9E85" : "rgba(255,255,255,0.15)" }}>{t.line.credit > 0 ? t.line.credit.toLocaleString("id-ID") : "—"}</td>
-                      <td style={{ textAlign: "right", padding: "8px 12px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: "#B8F53A", fontWeight: 600 }}>{t.balance.toLocaleString("id-ID")}</td>
+                    <tr key={i} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.03)" }}>
+                      <td style={{ padding: "8px 12px", fontSize: 13, color: "#697586", fontFamily: "JetBrains Mono, monospace", whiteSpace: "nowrap" }}>{t.je.date}</td>
+                      <td style={{ padding: "8px 12px", fontSize: 14, color: "#1A2232" }}>{t.je.description}</td>
+                      <td style={{ textAlign: "right", padding: "8px 12px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: t.line.debit > 0 ? "#1A2232" : "rgba(0,0,0,0.1)" }}>{t.line.debit > 0 ? (t.line.debit * 1_000_000).toLocaleString("id-ID") : "—"}</td>
+                      <td style={{ textAlign: "right", padding: "8px 12px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: t.line.credit > 0 ? "#9AA5B4" : "rgba(0,0,0,0.1)" }}>{t.line.credit > 0 ? (t.line.credit * 1_000_000).toLocaleString("id-ID") : "—"}</td>
+                      <td style={{ textAlign: "right", padding: "8px 12px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: "#2D7A4F", fontWeight: 600 }}>{(t.balance * 1_000_000).toLocaleString("id-ID")}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1223,12 +1427,12 @@ function LedgerView() {
 /* ═══════════════════════════════════════════════════════ */
 /* ─── Trial Balance View ──────────────────────────────── */
 function TrialBalanceView() {
-  const [accounts, setAccounts] = useState<ChartAccount[]>(() => getChartAccounts());
-  const [entries, setEntries] = useState<JournalEntry[]>(() => getJournalEntries());
+  const [accounts, setAccounts] = useState<ChartAccount[]>([]);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
 
   const refresh = useCallback(() => {
-    setAccounts(getChartAccounts());
-    setEntries(getJournalEntries());
+    apiGetChartAccounts().then(setAccounts).catch(() => setAccounts(getChartAccounts()));
+    apiGetJournalEntries().then(setEntries).catch(() => setEntries(getJournalEntries()));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -1250,9 +1454,9 @@ function TrialBalanceView() {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 8, background: balanced ? "rgba(184,245,58,0.08)" : "rgba(248,96,96,0.08)", border: `0.5px solid ${balanced ? "rgba(184,245,58,0.2)" : "rgba(248,96,96,0.2)"}` }}>
-          {balanced ? <CheckCircle2 size={14} color="#B8F53A" /> : <AlertCircle size={14} color="#F86060" />}
-          <p style={{ fontSize: 12, color: balanced ? "#B8F53A" : "#F86060", fontFamily: "JetBrains Mono, monospace" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 8, background: balanced ? "rgba(45,122,79,0.07)" : "rgba(248,96,96,0.08)", border: `0.5px solid ${balanced ? "rgba(45,122,79,0.2)" : "rgba(248,96,96,0.2)"}` }}>
+          {balanced ? <CheckCircle2 size={14} color="#2D7A4F" /> : <AlertCircle size={14} color="#C03C3C" />}
+          <p style={{ fontSize: 13, color: balanced ? "#2D7A4F" : "#C03C3C", fontFamily: "JetBrains Mono, monospace" }}>
             {balanced ? "NERACA SALDO SEIMBANG" : `TIDAK SEIMBANG — SELISIH: ${fmtM(Math.abs(grandD - grandC))}`}
           </p>
         </div>
@@ -1260,33 +1464,33 @@ function TrialBalanceView() {
 
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
-          <tr style={{ borderBottom: "0.5px solid rgba(255,255,255,0.1)" }}>
-            {[["left","KODE"],["left","NAMA AKUN"],["right","DEBIT (Jt)"],["right","KREDIT (Jt)"]].map(([align, lbl]) => (
-              <th key={lbl} style={{ textAlign: align as "left"|"right", padding: "10px 14px", fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", fontWeight: 400 }}>{lbl}</th>
+          <tr style={{ borderBottom: "0.5px solid rgba(0,0,0,0.08)" }}>
+            {[["left","KODE"],["left","NAMA AKUN"],["right","DEBIT (Rp)"],["right","KREDIT (Rp)"]].map(([align, lbl]) => (
+              <th key={lbl} style={{ textAlign: align as "left"|"right", padding: "10px 14px", fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace", fontWeight: 400 }}>{lbl}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, i) => row.kind === "header" ? (
             <tr key={`h-${row.type}`}>
-              <td colSpan={4} style={{ padding: "12px 14px 6px", fontSize: 10, color: ACC_TYPE_COLOR[row.type], fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", fontWeight: 700 }}>
+              <td colSpan={4} style={{ padding: "12px 14px 6px", fontSize: 12, color: ACC_TYPE_COLOR[row.type], fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", fontWeight: 700 }}>
                 {ACC_TYPE_LABEL[row.type].toUpperCase()}
               </td>
             </tr>
           ) : (
-            <tr key={row.acc.id} style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)" }}>
-              <td style={{ padding: "7px 14px", fontSize: 11, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace" }}>{row.acc.code}</td>
-              <td style={{ padding: "7px 14px", fontSize: 13, color: "#F2F5EF" }}>{row.acc.name}</td>
-              <td style={{ textAlign: "right", padding: "7px 14px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: row.acc.totalDebit > 0 ? "#F2F5EF" : "rgba(255,255,255,0.15)" }}>{row.acc.totalDebit > 0 ? row.acc.totalDebit.toLocaleString("id-ID") : "—"}</td>
-              <td style={{ textAlign: "right", padding: "7px 14px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: row.acc.totalCredit > 0 ? "#F2F5EF" : "rgba(255,255,255,0.15)" }}>{row.acc.totalCredit > 0 ? row.acc.totalCredit.toLocaleString("id-ID") : "—"}</td>
+            <tr key={row.acc.id} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.03)" }}>
+              <td style={{ padding: "7px 14px", fontSize: 13, color: "#697586", fontFamily: "JetBrains Mono, monospace" }}>{row.acc.code}</td>
+              <td style={{ padding: "7px 14px", fontSize: 14, color: "#1A2232" }}>{row.acc.name}</td>
+              <td style={{ textAlign: "right", padding: "7px 14px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: row.acc.totalDebit > 0 ? "#1A2232" : "rgba(0,0,0,0.1)" }}>{row.acc.totalDebit > 0 ? (row.acc.totalDebit * 1_000_000).toLocaleString("id-ID") : "—"}</td>
+              <td style={{ textAlign: "right", padding: "7px 14px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: row.acc.totalCredit > 0 ? "#1A2232" : "rgba(0,0,0,0.1)" }}>{row.acc.totalCredit > 0 ? (row.acc.totalCredit * 1_000_000).toLocaleString("id-ID") : "—"}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: "1px solid rgba(255,255,255,0.12)" }}>
-            <td colSpan={2} style={{ padding: "12px 14px", fontSize: 12, color: "#F2F5EF", fontWeight: 700, fontFamily: "Syne, sans-serif" }}>TOTAL</td>
-            <td style={{ textAlign: "right", padding: "12px 14px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#F2F5EF" }}>{grandD.toLocaleString("id-ID")}</td>
-            <td style={{ textAlign: "right", padding: "12px 14px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#F2F5EF" }}>{grandC.toLocaleString("id-ID")}</td>
+          <tr style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+            <td colSpan={2} style={{ padding: "12px 14px", fontSize: 13, color: "#1A2232", fontWeight: 700, fontFamily: "Geist, sans-serif" }}>TOTAL</td>
+            <td style={{ textAlign: "right", padding: "12px 14px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#1A2232" }}>{(grandD * 1_000_000).toLocaleString("id-ID")}</td>
+            <td style={{ textAlign: "right", padding: "12px 14px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#1A2232" }}>{(grandC * 1_000_000).toLocaleString("id-ID")}</td>
           </tr>
         </tfoot>
       </table>
@@ -1295,84 +1499,400 @@ function TrialBalanceView() {
 }
 
 /* ═══════════════════════════════════════════════════════ */
+/* ─── Period utilities ─────────────────────────────────── */
+const MON_MAP: Record<string, number> = {
+  Jan:0, Feb:1, Mar:2, Apr:3, Mei:4, Jun:5, Jul:6, Agu:7, Sep:8, Okt:9, Nov:10, Des:11,
+};
+const MON_ABBR = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+
+function parseDate(s: string): Date | null {
+  const p = s.trim().split(/\s+/);
+  if (p.length === 3) return new Date(+p[2], MON_MAP[p[1]] ?? 0, +p[0]);
+  if (p.length === 2) return new Date(+p[1], MON_MAP[p[0]] ?? 0, 1);
+  return null;
+}
+
+interface ReportPeriod {
+  id: string;
+  fromMonth: number; fromYear: number;
+  toMonth: number;   toYear: number;
+}
+
+function periodLabel(p: ReportPeriod): string {
+  if (p.fromMonth === p.toMonth && p.fromYear === p.toYear)
+    return `${MON_ABBR[p.fromMonth]} ${p.fromYear}`;
+  if (p.fromYear === p.toYear)
+    return `${MON_ABBR[p.fromMonth]}–${MON_ABBR[p.toMonth]} ${p.fromYear}`;
+  return `${MON_ABBR[p.fromMonth]} ${p.fromYear} – ${MON_ABBR[p.toMonth]} ${p.toYear}`;
+}
+
+function filterPL(entries: JournalEntry[], p: ReportPeriod): JournalEntry[] {
+  const from = new Date(p.fromYear, p.fromMonth, 1);
+  const to   = new Date(p.toYear, p.toMonth + 1, 0, 23, 59, 59);
+  return entries.filter(e => { const d = parseDate(e.date); return d && d >= from && d <= to; });
+}
+
+function filterBS(entries: JournalEntry[], p: ReportPeriod): JournalEntry[] {
+  const to = new Date(p.toYear, p.toMonth + 1, 0, 23, 59, 59);
+  return entries.filter(e => { const d = parseDate(e.date); return d && d <= to; });
+}
+
+function defaultPeriod(): ReportPeriod {
+  const y = new Date().getFullYear();
+  return { id: "1", fromMonth: 0, fromYear: y, toMonth: 11, toYear: y };
+}
+
+function getMonthsInPeriod(p: ReportPeriod): {month: number; year: number}[] {
+  const res: {month: number; year: number}[] = [];
+  let m = p.fromMonth, y = p.fromYear;
+  while (y < p.toYear || (y === p.toYear && m <= p.toMonth)) {
+    res.push({ month: m, year: y });
+    if (m === 11) { m = 0; y++; } else m++;
+  }
+  return res;
+}
+
+const PRESETS = [
+  { label: "Tahun Ini",   fn: () => { const y = new Date().getFullYear(); return { fromMonth: 0, fromYear: y, toMonth: 11, toYear: y }; } },
+  { label: "Tahun Lalu",  fn: () => { const y = new Date().getFullYear()-1; return { fromMonth: 0, fromYear: y, toMonth: 11, toYear: y }; } },
+  { label: "Kuartal Ini", fn: () => { const now = new Date(); const q = Math.floor(now.getMonth()/3); return { fromMonth: q*3, fromYear: now.getFullYear(), toMonth: q*3+2, toYear: now.getFullYear() }; } },
+  { label: "Kuartal Lalu",fn: () => { const now = new Date(); let q = Math.floor(now.getMonth()/3)-1; let y = now.getFullYear(); if (q<0){q=3;y--;} return { fromMonth: q*3, fromYear: y, toMonth: q*3+2, toYear: y }; } },
+  { label: "Bulan Ini",   fn: () => { const now = new Date(); return { fromMonth: now.getMonth(), fromYear: now.getFullYear(), toMonth: now.getMonth(), toYear: now.getFullYear() }; } },
+  { label: "Bulan Lalu",  fn: () => { let m = new Date().getMonth()-1, y = new Date().getFullYear(); if(m<0){m=11;y--;} return { fromMonth: m, fromYear: y, toMonth: m, toYear: y }; } },
+];
+
+const PERIOD_COLORS = ["#2D7A4F", "#3E7CC8", "#7050C0"];
+
+function PeriodBar({ periods, onChange }: { periods: ReportPeriod[]; onChange: (p: ReportPeriod[]) => void }) {
+  const years = Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - 4 + i);
+
+  function update(id: string, patch: Partial<ReportPeriod>) {
+    onChange(periods.map(p => p.id === id ? { ...p, ...patch } : p));
+  }
+  function addPeriod() {
+    const prev = periods[periods.length - 1];
+    const newYear = prev.fromYear - 1;
+    onChange([...periods, { id: Date.now().toString(), fromMonth: prev.fromMonth, fromYear: newYear, toMonth: prev.toMonth, toYear: newYear }]);
+  }
+  function removePeriod(id: string) { onChange(periods.filter(p => p.id !== id)); }
+  function applyPreset(id: string, preset: typeof PRESETS[0]) {
+    const vals = preset.fn();
+    onChange(periods.map(p => p.id === id ? { ...p, ...vals } : p));
+  }
+
+  const selStyle = (color: string): React.CSSProperties => ({
+    padding: "6px 8px", borderRadius: 6, border: `1px solid ${color}20`,
+    background: `${color}08`, color: "#1A2232", fontSize: 13,
+    fontFamily: "DM Sans, sans-serif", cursor: "pointer", appearance: "none" as const,
+  });
+
+  return (
+    <div style={{ ...card, marginBottom: 20, padding: "14px 18px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10, alignItems: "flex-start" }}>
+        {periods.map((p, idx) => {
+          const color = PERIOD_COLORS[idx] ?? "#697586";
+          return (
+            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const, flex: 1, minWidth: 320 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color, fontFamily: "DM Sans, sans-serif", minWidth: 64 }}>
+                {periods.length > 1 ? `Periode ${idx + 1}` : "Periode"}
+              </span>
+              <select value={p.fromMonth} onChange={e => update(p.id, { fromMonth: +e.target.value })} style={selStyle(color)}>
+                {MON_ABBR.map((m, i) => <option key={m} value={i}>{m}</option>)}
+              </select>
+              <select value={p.fromYear} onChange={e => update(p.id, { fromYear: +e.target.value })} style={selStyle(color)}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <span style={{ fontSize: 12, color: "#9AA5B4" }}>s/d</span>
+              <select value={p.toMonth} onChange={e => update(p.id, { toMonth: +e.target.value })} style={selStyle(color)}>
+                {MON_ABBR.map((m, i) => <option key={m} value={i}>{m}</option>)}
+              </select>
+              <select value={p.toYear} onChange={e => update(p.id, { toYear: +e.target.value })} style={selStyle(color)}>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              {/* Presets */}
+              <select defaultValue="" onChange={e => { if (e.target.value) { applyPreset(p.id, PRESETS[+e.target.value]); e.target.value = ""; } }} style={{ ...selStyle(color), color: "#697586", fontSize: 12, minWidth: 90 }}>
+                <option value="">Preset...</option>
+                {PRESETS.map((pr, i) => <option key={pr.label} value={i}>{pr.label}</option>)}
+              </select>
+              {idx > 0 && (
+                <button onClick={() => removePeriod(p.id)}
+                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(192,60,60,0.2)", background: "transparent", color: "#C03C3C", cursor: "pointer", fontSize: 12 }}>
+                  ×
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {periods.length < 3 && (
+          <button onClick={addPeriod}
+            style={{ padding: "7px 14px", borderRadius: 6, border: "1px solid #D6DBE8", background: "transparent", color: "#697586", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" as const, alignSelf: "center" }}>
+            + Bandingkan
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Multiperiod table helpers ──────────────────────────── */
+function rpCell(v: number, color?: string): React.ReactNode {
+  return (
+    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 14, color: color ?? "#1A2232" }}>
+      {v === 0 ? "—" : (v * 1_000_000).toLocaleString("id-ID")}
+    </span>
+  );
+}
+
+function changeCell(base: number, compare: number): React.ReactNode {
+  if (base === 0 && compare === 0) return <span style={{ color: "#9AA5B4", fontSize: 13 }}>—</span>;
+  const diff = compare - base;
+  const pct  = base !== 0 ? (diff / Math.abs(base)) * 100 : null;
+  const pos  = diff >= 0;
+  return (
+    <div style={{ textAlign: "right" as const }}>
+      <div style={{ fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: pos ? "#2D7A4F" : "#C03C3C", fontWeight: 600 }}>
+        {pos ? "+" : ""}{(diff * 1_000_000).toLocaleString("id-ID")}
+      </div>
+      {pct !== null && (
+        <div style={{ fontSize: 11, color: pos ? "#2D7A4F" : "#C03C3C", opacity: 0.8 }}>
+          {pos ? "+" : ""}{pct.toFixed(1)}%
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════ */
 /* ─── Profit & Loss View ──────────────────────────────── */
 function ProfitLossView() {
-  const [accounts, setAccounts] = useState<ChartAccount[]>(() => getChartAccounts());
-  const [entries, setEntries] = useState<JournalEntry[]>(() => getJournalEntries());
+  const [accounts, setAccounts] = useState<ChartAccount[]>([]);
+  const [allEntries, setAllEntries] = useState<JournalEntry[]>([]);
+  const [periods, setPeriods] = useState<ReportPeriod[]>([defaultPeriod()]);
+  const [showMonthly, setShowMonthly] = useState(false);
+  const [pdfOrientation, setPdfOrientation] = useState<"portrait" | "landscape">("portrait");
 
   const refresh = useCallback(() => {
-    setAccounts(getChartAccounts());
-    setEntries(getJournalEntries());
+    apiGetChartAccounts().then(setAccounts).catch(() => setAccounts(getChartAccounts()));
+    apiGetJournalEntries().then(setAllEntries).catch(() => setAllEntries(getJournalEntries()));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
-  const ledger = computeLedger(accounts, entries);
-  const revenues = ledger.filter(a => a.type === "revenue" && a.balance !== 0);
-  const expenses = ledger.filter(a => a.type === "expense" && a.balance !== 0);
-  const totalRevenue = revenues.reduce((s, a) => s + a.balance, 0);
-  const totalExpense = expenses.reduce((s, a) => s + a.balance, 0);
-  const netIncome = totalRevenue - totalExpense;
-  const profitable = netIncome >= 0;
+  const multi = periods.length > 1;
 
-  function AccSection({ title, items, total, color }: { title: string; items: LedgerAccount[]; total: number; color: string }) {
+  // Compute data per period
+  const perPeriod = periods.map(p => {
+    const ledger = computeLedger(accounts, filterPL(allEntries, p));
+    const revenues = ledger.filter(a => a.type === "revenue");
+    const expenses = ledger.filter(a => a.type === "expense");
+    const totalRev = revenues.reduce((s, a) => s + a.balance, 0);
+    const totalExp = expenses.reduce((s, a) => s + a.balance, 0);
+    return { ledger, revenues, expenses, totalRev, totalExp, net: totalRev - totalExp };
+  });
+
+  // Collect all unique account ids across periods
+  const allRevIds = [...new Set(perPeriod.flatMap(d => d.revenues.map(a => a.id)))];
+  const allExpIds = [...new Set(perPeriod.flatMap(d => d.expenses.map(a => a.id)))];
+
+  // Monthly data per period (only computed when showMonthly)
+  const monthlyPL = showMonthly ? periods.map(p =>
+    getMonthsInPeriod(p).map(({month, year}) => {
+      const mp: ReportPeriod = { id: "", fromMonth: month, fromYear: year, toMonth: month, toYear: year };
+      const ldg = computeLedger(accounts, filterPL(allEntries, mp));
+      return { month, year, label: multi ? `${MON_ABBR[month]}'${String(year).slice(-2)}` : MON_ABBR[month], ledger: ldg };
+    })
+  ) : null;
+
+  const thStyle: React.CSSProperties = { padding: "8px 10px", fontSize: 11, color: "#697586", fontWeight: 600, fontFamily: "DM Sans, sans-serif", textAlign: "right" as const, whiteSpace: "nowrap" as const, borderBottom: "1px solid #E4E8F2" };
+  const tdName: React.CSSProperties = { padding: "9px 14px", fontSize: 14, color: "#1A2232" };
+  const tdVal: React.CSSProperties = { padding: "7px 10px", textAlign: "right" as const };
+  const tdTotal: React.CSSProperties = { padding: "10px 10px", textAlign: "right" as const, borderTop: "1px solid #E4E8F2", fontWeight: 700 };
+
+  function MultiSection({ title, color, ids, type }: { title: string; color: string; ids: string[]; type: "revenue"|"expense" }) {
+    const periodTotals = perPeriod.map(d => type === "revenue" ? d.totalRev : d.totalExp);
     return (
-      <div style={{ marginBottom: 28 }}>
-        <p style={{ fontSize: 11, color, fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 10 }}>{title}</p>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <tbody>
-            {items.length === 0
-              ? <tr><td colSpan={2} style={{ padding: "10px 14px", fontSize: 13, color: "#7A9E85", fontStyle: "italic" }}>Tidak ada transaksi.</td></tr>
-              : items.map(a => (
-                <tr key={a.id} style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)" }}>
-                  <td style={{ padding: "8px 14px", fontSize: 13, color: "#F2F5EF" }}>{a.name}</td>
-                  <td style={{ textAlign: "right", padding: "8px 14px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color }}>{fmtM(a.balance)}</td>
+      <div style={{ ...card, marginBottom: 20, padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid #E4E8F2", background: "#FAFBFD" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: "0.8px", fontFamily: "DM Sans, sans-serif" }}>{title}</span>
+        </div>
+        <div style={{ overflowX: "auto" as const }}>
+        <table style={{ width: showMonthly ? "max-content" : "100%", minWidth: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            {showMonthly && monthlyPL ? (
+              <>
+                {/* Row 1: period group headers */}
+                <tr>
+                  <th style={{ ...thStyle, textAlign: "left" as const, position: "sticky" as const, left: 0, background: "#FAFBFD", minWidth: 160, zIndex: 1 }} rowSpan={2}>Akun</th>
+                  {periods.map((p, i) => {
+                    const mths = monthlyPL[i];
+                    return (
+                      <th key={p.id} colSpan={mths.length + 1}
+                        style={{ ...thStyle, textAlign: "center" as const, color: PERIOD_COLORS[i], borderLeft: i > 0 ? "2px solid #E4E8F2" : undefined, background: `${PERIOD_COLORS[i]}08` }}>
+                        {periodLabel(p)}
+                      </th>
+                    );
+                  })}
+                  {multi && <th style={{ ...thStyle, borderLeft: "2px solid #E4E8F2" }} rowSpan={2}>Δ Total</th>}
                 </tr>
-              ))
-            }
+                {/* Row 2: month sub-headers + Total per period */}
+                <tr>
+                  {periods.map((p, i) => {
+                    const mths = monthlyPL[i];
+                    return (
+                      <React.Fragment key={p.id}>
+                        {mths.map(m => (
+                          <th key={`${m.month}-${m.year}`} style={{ ...thStyle, color: PERIOD_COLORS[i], borderLeft: m.month === mths[0].month && i > 0 ? "2px solid #E4E8F2" : undefined, background: `${PERIOD_COLORS[i]}06` }}>
+                            {m.label}
+                          </th>
+                        ))}
+                        <th style={{ ...thStyle, color: PERIOD_COLORS[i], fontWeight: 700, background: `${PERIOD_COLORS[i]}10` }}>Total</th>
+                      </React.Fragment>
+                    );
+                  })}
+                </tr>
+              </>
+            ) : (
+              <tr>
+                <th style={{ ...thStyle, textAlign: "left" as const, width: "40%" }}>Akun</th>
+                {periods.map((p, i) => <th key={p.id} style={{ ...thStyle, color: PERIOD_COLORS[i] }}>{periodLabel(p)}</th>)}
+                {multi && <th style={{ ...thStyle }}>Perubahan</th>}
+              </tr>
+            )}
+          </thead>
+          <tbody>
+            {ids.length === 0 ? (
+              <tr><td colSpan={100} style={{ padding: "12px 14px", color: "#9AA5B4", fontStyle: "italic", fontSize: 14 }}>Tidak ada transaksi.</td></tr>
+            ) : ids.map(id => {
+              const name = perPeriod.flatMap(d => [...d.revenues, ...d.expenses]).find(a => a.id === id)?.name ?? id;
+              const periodVals = perPeriod.map(d => (type === "revenue" ? d.revenues : d.expenses).find(a => a.id === id)?.balance ?? 0);
+              return (
+                <tr key={id} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.04)" }}>
+                  <td style={{ ...tdName, position: showMonthly ? "sticky" as const : undefined, left: 0, background: "#FFFFFF", zIndex: showMonthly ? 1 : undefined }}>{name}</td>
+                  {showMonthly && monthlyPL ? (
+                    periods.map((p, pi) => {
+                      const mths = monthlyPL[pi];
+                      return (
+                        <React.Fragment key={p.id}>
+                          {mths.map(m => {
+                            const accs = m.ledger.filter(a => a.type === type);
+                            const v = accs.find(a => a.id === id)?.balance ?? 0;
+                            return <td key={`${m.month}-${m.year}`} style={{ ...tdVal, borderLeft: m.month === mths[0].month && pi > 0 ? "2px solid #E4E8F2" : undefined }}>{v !== 0 ? rpCell(v, color) : <span style={{ color: "#D6DBE8", fontSize: 12 }}>—</span>}</td>;
+                          })}
+                          <td style={{ ...tdVal, background: `${PERIOD_COLORS[pi]}06`, fontWeight: 600 }}>{rpCell(periodVals[pi], color)}</td>
+                        </React.Fragment>
+                      );
+                    })
+                  ) : (
+                    periodVals.map((v, i) => <td key={i} style={tdVal}>{rpCell(v, color)}</td>)
+                  )}
+                  {multi && !showMonthly && <td style={tdVal}>{changeCell(periodVals[0], periodVals[1])}</td>}
+                  {multi && showMonthly && <td style={{ ...tdVal, borderLeft: "2px solid #E4E8F2" }}>{changeCell(periodVals[0], periodVals[1])}</td>}
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
-            <tr style={{ borderTop: "0.5px solid rgba(255,255,255,0.1)" }}>
-              <td style={{ padding: "10px 14px", fontSize: 12, color: "#F2F5EF", fontWeight: 700 }}>Total {title.split(" ")[0]}</td>
-              <td style={{ textAlign: "right", padding: "10px 14px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color }}>{fmtM(total)}</td>
+            <tr>
+              <td style={{ ...tdTotal, textAlign: "left" as const, fontSize: 13, position: showMonthly ? "sticky" as const : undefined, left: 0, background: "#FFFFFF" }}>Total {title.split(" ")[0]}</td>
+              {showMonthly && monthlyPL ? (
+                periods.map((p, pi) => {
+                  const mths = monthlyPL[pi];
+                  return (
+                    <React.Fragment key={p.id}>
+                      {mths.map(m => {
+                        const t = m.ledger.filter(a => a.type === type).reduce((s,a) => s+a.balance, 0);
+                        return <td key={`${m.month}-${m.year}`} style={{ ...tdTotal, borderLeft: m.month === mths[0].month && pi > 0 ? "2px solid #E4E8F2" : undefined }}>
+                          <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 12, color, fontWeight: 700 }}>{t > 0 ? (t*1_000_000).toLocaleString("id-ID") : "—"}</span>
+                        </td>;
+                      })}
+                      <td style={{ ...tdTotal, background: `${PERIOD_COLORS[pi]}06` }}>
+                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 13, color, fontWeight: 700 }}>{(periodTotals[pi]*1_000_000).toLocaleString("id-ID")}</span>
+                      </td>
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                perPeriod.map((d, i) => (
+                  <td key={i} style={tdTotal}>
+                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 14, color, fontWeight: 700 }}>
+                      {((type === "revenue" ? d.totalRev : d.totalExp) * 1_000_000).toLocaleString("id-ID")}
+                    </span>
+                  </td>
+                ))
+              )}
+              {multi && <td style={{ ...tdTotal, borderLeft: showMonthly ? "2px solid #E4E8F2" : undefined }}>{changeCell(periodTotals[0], periodTotals[1])}</td>}
             </tr>
           </tfoot>
         </table>
+        </div>{/* /overflowX */}
       </div>
     );
   }
 
   return (
     <div>
-      <div style={{ ...card, marginBottom: 28, position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: profitable ? "#B8F53A" : "#F86060" }} />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <p style={{ fontSize: 11, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", marginBottom: 6 }}>LABA / RUGI BERSIH</p>
-            <p style={{ fontSize: 32, fontFamily: "Syne, sans-serif", fontWeight: 800, color: profitable ? "#B8F53A" : "#F86060" }}>
-              {profitable ? "+" : ""}{fmtM(netIncome)}
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 28 }}>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ fontSize: 10, color: "#7A9E85", marginBottom: 4 }}>Total Pendapatan</p>
-              <p style={{ fontSize: 18, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#B8F53A" }}>{fmtM(totalRevenue)}</p>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ fontSize: 10, color: "#7A9E85", marginBottom: 4 }}>Total Beban</p>
-              <p style={{ fontSize: 18, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#F8C660" }}>{fmtM(totalExpense)}</p>
-            </div>
-          </div>
+      {/* Period bar + toolbar */}
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 4 }}>
+        <div style={{ flex: 1 }}><PeriodBar periods={periods} onChange={setPeriods} /></div>
+        <div style={{ display: "flex", gap: 6, alignSelf: "center" }}>
+          {/* Per Bulan toggle */}
+          <button onClick={() => setShowMonthly(m => !m)}
+            style={{ padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: `1px solid ${showMonthly ? "#2D7A4F" : "#D6DBE8"}`, background: showMonthly ? "rgba(45,122,79,0.07)" : "transparent", color: showMonthly ? "#2D7A4F" : "#697586", cursor: "pointer", whiteSpace: "nowrap" as const }}>
+            Per Bulan
+          </button>
+          {/* Orientation toggle */}
+          <button onClick={() => setPdfOrientation(o => o === "portrait" ? "landscape" : "portrait")}
+            title={`Mode: ${pdfOrientation}`}
+            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #D6DBE8", background: "transparent", color: "#697586", cursor: "pointer", fontSize: 12 }}>
+            {pdfOrientation === "portrait" ? "↕ Portrait" : "↔ Landscape"}
+          </button>
+          {/* Export */}
+          <button onClick={() => import("@/lib/pdfExport").then(m => m.exportProfitLoss(perPeriod[0].revenues, perPeriod[0].expenses, perPeriod[0].net, periodLabel(periods[0]), pdfOrientation))}
+            style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#2D7A4F", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const }}>
+            <BookOpen size={14} /> Export PDF
+          </button>
         </div>
       </div>
 
-      <AccSection title="PENDAPATAN" items={revenues} total={totalRevenue} color="#B8F53A" />
-      <AccSection title="BEBAN" items={expenses} total={totalExpense} color="#F8C660" />
+      {/* Summary cards */}
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${periods.length}, 1fr)`, gap: 12, marginBottom: 20 }}>
+        {perPeriod.map((d, i) => {
+          const profitable = d.net >= 0;
+          const color = PERIOD_COLORS[i];
+          return (
+            <div key={periods[i].id} style={{ ...card, position: "relative", overflow: "hidden", borderTop: `3px solid ${color}` }}>
+              <p style={{ fontSize: 12, color: "#697586", marginBottom: 4 }}>{periodLabel(periods[i])}</p>
+              <p style={{ fontSize: 22, fontFamily: "Geist, sans-serif", fontWeight: 800, color: profitable ? "#2D7A4F" : "#C03C3C", marginBottom: 8 }}>
+                {profitable ? "+" : ""}{fmtM(d.net)}
+              </p>
+              <div style={{ display: "flex", gap: 16 }}>
+                <div><p style={{ fontSize: 11, color: "#9AA5B4" }}>Pendapatan</p><p style={{ fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: "#2D7A4F", fontWeight: 600 }}>{fmtM(d.totalRev)}</p></div>
+                <div><p style={{ fontSize: 11, color: "#9AA5B4" }}>Beban</p><p style={{ fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: "#B06820", fontWeight: 600 }}>{fmtM(d.totalExp)}</p></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
-      <div style={{ ...card, background: profitable ? "rgba(184,245,58,0.05)" : "rgba(248,96,96,0.05)", border: `0.5px solid ${profitable ? "rgba(184,245,58,0.2)" : "rgba(248,96,96,0.2)"}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <p style={{ fontSize: 14, color: "#F2F5EF", fontWeight: 700 }}>{profitable ? "Laba Bersih" : "Rugi Bersih"}</p>
-          <p style={{ fontSize: 20, fontFamily: "JetBrains Mono, monospace", fontWeight: 800, color: profitable ? "#B8F53A" : "#F86060" }}>{fmtM(Math.abs(netIncome))}</p>
-        </div>
+      <MultiSection title="PENDAPATAN" color="#2D7A4F" ids={allRevIds} type="revenue" />
+      <MultiSection title="BEBAN OPERASIONAL" color="#B06820" ids={allExpIds} type="expense" />
+
+      {/* Net income row */}
+      <div style={{ ...card, padding: "14px 18px" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <tbody>
+            <tr>
+              <td style={{ fontSize: 14, fontWeight: 700, color: "#1A2232", width: "40%" }}>Laba / Rugi Bersih</td>
+              {perPeriod.map((d, i) => (
+                <td key={i} style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 16, fontFamily: "JetBrains Mono, monospace", fontWeight: 800, color: d.net >= 0 ? "#2D7A4F" : "#C03C3C" }}>
+                    {d.net >= 0 ? "+" : ""}{fmtM(d.net)}
+                  </span>
+                </td>
+              ))}
+              {multi && <td style={{ textAlign: "right" }}>{changeCell(perPeriod[0].net, perPeriod[1].net)}</td>}
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -1381,95 +1901,745 @@ function ProfitLossView() {
 /* ═══════════════════════════════════════════════════════ */
 /* ─── Balance Sheet View ──────────────────────────────── */
 function BalanceSheetView() {
-  const [accounts, setAccounts] = useState<ChartAccount[]>(() => getChartAccounts());
-  const [entries, setEntries] = useState<JournalEntry[]>(() => getJournalEntries());
+  const [accounts, setAccounts] = useState<ChartAccount[]>([]);
+  const [allEntries, setAllEntries] = useState<JournalEntry[]>([]);
+  const [periods, setPeriods] = useState<ReportPeriod[]>([defaultPeriod()]);
+  const [showMonthly, setShowMonthly] = useState(false);
+  const [pdfOrientation, setPdfOrientation] = useState<"portrait" | "landscape">("portrait");
 
   const refresh = useCallback(() => {
-    setAccounts(getChartAccounts());
-    setEntries(getJournalEntries());
+    apiGetChartAccounts().then(setAccounts).catch(() => setAccounts(getChartAccounts()));
+    apiGetJournalEntries().then(setAllEntries).catch(() => setAllEntries(getJournalEntries()));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
-  const ledger = computeLedger(accounts, entries);
-  const assets      = ledger.filter(a => a.type === "asset"     && a.balance !== 0);
-  const liabilities = ledger.filter(a => a.type === "liability" && a.balance !== 0);
-  const equities    = ledger.filter(a => a.type === "equity"    && a.balance !== 0);
-  const netIncome   = ledger.filter(a => a.type === "revenue").reduce((s, a) => s + a.balance, 0)
-                    - ledger.filter(a => a.type === "expense").reduce((s, a) => s + a.balance, 0);
-  const totalAsset     = assets.reduce((s, a) => s + a.balance, 0);
-  const totalLiability = liabilities.reduce((s, a) => s + a.balance, 0);
-  const totalEquity    = equities.reduce((s, a) => s + a.balance, 0);
-  const totalLiabEq    = totalLiability + totalEquity + netIncome;
-  const balanced       = Math.abs(totalAsset - totalLiabEq) < 0.001;
+  const multi = periods.length > 1;
 
-  function BsSection({ title, items, total, color }: { title: string; items: LedgerAccount[]; total: number; color: string }) {
+  // Balance Sheet uses cumulative up-to-period filter
+  const perPeriod = periods.map(p => {
+    const ledger = computeLedger(accounts, filterBS(allEntries, p));
+    const assets      = ledger.filter(a => a.type === "asset");
+    const liabilities = ledger.filter(a => a.type === "liability");
+    const equities    = ledger.filter(a => a.type === "equity");
+    const net         = ledger.filter(a => a.type === "revenue").reduce((s, a) => s + a.balance, 0)
+                      - ledger.filter(a => a.type === "expense").reduce((s, a) => s + a.balance, 0);
+    const totalAsset  = assets.reduce((s, a) => s + a.balance, 0);
+    const totalLiab   = liabilities.reduce((s, a) => s + a.balance, 0);
+    const totalEq     = equities.reduce((s, a) => s + a.balance, 0);
+    const totalPassiva = totalLiab + totalEq + net;
+    const balanced    = Math.abs(totalAsset - totalPassiva) < 0.001;
+    return { assets, liabilities, equities, net, totalAsset, totalLiab, totalEq, totalPassiva, balanced };
+  });
+
+  const allAssetIds = [...new Set(perPeriod.flatMap(d => d.assets.filter(a => a.balance !== 0).map(a => a.id)))];
+  const allLiabIds  = [...new Set(perPeriod.flatMap(d => d.liabilities.filter(a => a.balance !== 0).map(a => a.id)))];
+  const allEqIds    = [...new Set(perPeriod.flatMap(d => d.equities.filter(a => a.balance !== 0).map(a => a.id)))];
+
+  // Monthly BS data (cumulative up to each month)
+  const monthlyBS = showMonthly ? periods.map(p =>
+    getMonthsInPeriod(p).map(({month, year}) => {
+      const mp: ReportPeriod = { id: "", fromMonth: 0, fromYear: 2000, toMonth: month, toYear: year };
+      const ldg = computeLedger(accounts, filterBS(allEntries, mp));
+      return { month, year, label: multi ? `${MON_ABBR[month]}'${String(year).slice(-2)}` : MON_ABBR[month], ledger: ldg };
+    })
+  ) : null;
+
+  const thStyle: React.CSSProperties = { padding: "8px 10px", fontSize: 11, color: "#697586", fontWeight: 600, fontFamily: "DM Sans, sans-serif", textAlign: "right" as const, whiteSpace: "nowrap" as const, borderBottom: "1px solid #E4E8F2" };
+  const tdName: React.CSSProperties = { padding: "9px 14px", fontSize: 14, color: "#1A2232" };
+  const tdVal: React.CSSProperties  = { padding: "7px 10px", textAlign: "right" as const };
+  const tdTotal: React.CSSProperties = { padding: "10px 10px", textAlign: "right" as const, borderTop: "1px solid #E4E8F2", fontWeight: 700 };
+
+  function BsTable({ title, color, ids, getter }: {
+    title: string; color: string; ids: string[];
+    getter: (d: typeof perPeriod[0]) => LedgerAccount[];
+  }) {
+    const totals = perPeriod.map(d => getter(d).reduce((s, a) => s + a.balance, 0));
     return (
-      <div style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: 10, color, fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 8 }}>{title}</p>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <tbody>
-            {items.length === 0
-              ? <tr><td colSpan={2} style={{ padding: "8px 14px", fontSize: 13, color: "#7A9E85", fontStyle: "italic" }}>Tidak ada saldo.</td></tr>
-              : items.map(a => (
-                <tr key={a.id} style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)" }}>
-                  <td style={{ padding: "7px 14px", fontSize: 13, color: "#F2F5EF" }}>{a.name}</td>
-                  <td style={{ textAlign: "right", padding: "7px 14px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: "#F2F5EF" }}>{fmtM(a.balance)}</td>
+      <div style={{ ...card, marginBottom: 16, padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "11px 16px 8px", background: "#FAFBFD", borderBottom: "1px solid #E4E8F2" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: "0.8px" }}>{title}</span>
+        </div>
+        <div style={{ overflowX: "auto" as const }}>
+        <table style={{ width: showMonthly ? "max-content" : "100%", minWidth: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            {showMonthly && monthlyBS ? (
+              <>
+                <tr>
+                  <th style={{ ...thStyle, textAlign: "left" as const, position: "sticky" as const, left: 0, background: "#FAFBFD", minWidth: 160, zIndex: 1 }} rowSpan={2}>Akun</th>
+                  {periods.map((p, i) => {
+                    const mths = monthlyBS[i];
+                    return (
+                      <th key={p.id} colSpan={mths.length + 1}
+                        style={{ ...thStyle, textAlign: "center" as const, color: PERIOD_COLORS[i], borderLeft: i > 0 ? "2px solid #E4E8F2" : undefined, background: `${PERIOD_COLORS[i]}08` }}>
+                        {periodLabel(p)}
+                      </th>
+                    );
+                  })}
+                  {multi && <th style={{ ...thStyle, borderLeft: "2px solid #E4E8F2" }} rowSpan={2}>Δ</th>}
                 </tr>
-              ))
-            }
+                <tr>
+                  {periods.map((p, i) => {
+                    const mths = monthlyBS[i];
+                    return (
+                      <React.Fragment key={p.id}>
+                        {mths.map(m => (
+                          <th key={`${m.month}-${m.year}`} style={{ ...thStyle, color: PERIOD_COLORS[i], borderLeft: m.month === mths[0].month && i > 0 ? "2px solid #E4E8F2" : undefined }}>
+                            {m.label}
+                          </th>
+                        ))}
+                        <th style={{ ...thStyle, color: PERIOD_COLORS[i], fontWeight: 700, background: `${PERIOD_COLORS[i]}10` }}>Total</th>
+                      </React.Fragment>
+                    );
+                  })}
+                </tr>
+              </>
+            ) : (
+              <tr>
+                <th style={{ ...thStyle, textAlign: "left" as const, width: "40%" }}>Akun</th>
+                {periods.map((p, i) => <th key={p.id} style={{ ...thStyle, color: PERIOD_COLORS[i] }}>Per {MON_ABBR[p.toMonth]} {p.toYear}</th>)}
+                {multi && <th style={thStyle}>Perubahan</th>}
+              </tr>
+            )}
+          </thead>
+          <tbody>
+            {ids.length === 0 ? (
+              <tr><td colSpan={100} style={{ padding: "12px 14px", color: "#9AA5B4", fontStyle: "italic", fontSize: 14 }}>Tidak ada saldo.</td></tr>
+            ) : ids.map(id => {
+              const name = perPeriod.flatMap(d => getter(d)).find(a => a.id === id)?.name ?? id;
+              const vals = perPeriod.map(d => getter(d).find(a => a.id === id)?.balance ?? 0);
+              return (
+                <tr key={id} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.04)" }}>
+                  <td style={{ ...tdName, position: showMonthly ? "sticky" as const : undefined, left: 0, background: "#FFFFFF", zIndex: showMonthly ? 1 : undefined }}>{name}</td>
+                  {showMonthly && monthlyBS ? (
+                    periods.map((p, pi) => {
+                      const mths = monthlyBS[pi];
+                      return (
+                        <React.Fragment key={p.id}>
+                          {mths.map(m => {
+                            const v = getter({ assets: m.ledger.filter(a => a.type === "asset"), liabilities: m.ledger.filter(a => a.type === "liability"), equities: m.ledger.filter(a => a.type === "equity"), net: 0, totalAsset: 0, totalLiab: 0, totalEq: 0, totalPassiva: 0, balanced: true }).find(a => a.id === id)?.balance ?? 0;
+                            return <td key={`${m.month}-${m.year}`} style={{ ...tdVal, borderLeft: m.month === mths[0].month && pi > 0 ? "2px solid #E4E8F2" : undefined }}>{v !== 0 ? rpCell(v, color) : <span style={{ color: "#D6DBE8", fontSize: 12 }}>—</span>}</td>;
+                          })}
+                          <td style={{ ...tdVal, background: `${PERIOD_COLORS[pi]}06`, fontWeight: 600 }}>{rpCell(vals[pi], color)}</td>
+                        </React.Fragment>
+                      );
+                    })
+                  ) : (
+                    vals.map((v, i) => <td key={i} style={tdVal}>{rpCell(v, v !== 0 ? color : undefined)}</td>)
+                  )}
+                  {multi && <td style={{ ...tdVal, borderLeft: showMonthly ? "2px solid #E4E8F2" : undefined }}>{changeCell(vals[0], vals[1])}</td>}
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
-            <tr style={{ borderTop: "0.5px solid rgba(255,255,255,0.1)" }}>
-              <td style={{ padding: "8px 14px", fontSize: 12, color: "#F2F5EF", fontWeight: 700 }}>Total {title}</td>
-              <td style={{ textAlign: "right", padding: "8px 14px", fontSize: 14, fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color }}>{fmtM(total)}</td>
+            <tr>
+              <td style={{ ...tdTotal, textAlign: "left" as const, fontSize: 13, position: showMonthly ? "sticky" as const : undefined, left: 0, background: "#FFFFFF" }}>Total {title}</td>
+              {showMonthly && monthlyBS ? (
+                periods.map((p, pi) => {
+                  const mths = monthlyBS[pi];
+                  return (
+                    <React.Fragment key={p.id}>
+                      {mths.map(m => {
+                        const t = getter({ assets: m.ledger.filter(a => a.type === "asset"), liabilities: m.ledger.filter(a => a.type === "liability"), equities: m.ledger.filter(a => a.type === "equity"), net: 0, totalAsset: 0, totalLiab: 0, totalEq: 0, totalPassiva: 0, balanced: true }).reduce((s, a) => s + a.balance, 0);
+                        return <td key={`${m.month}-${m.year}`} style={{ ...tdTotal, borderLeft: m.month === mths[0].month && pi > 0 ? "2px solid #E4E8F2" : undefined }}>
+                          <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 12, color, fontWeight: 700 }}>{t !== 0 ? (t*1_000_000).toLocaleString("id-ID") : "—"}</span>
+                        </td>;
+                      })}
+                      <td style={{ ...tdTotal, background: `${PERIOD_COLORS[pi]}06` }}>
+                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 13, color, fontWeight: 700 }}>{(totals[pi]*1_000_000).toLocaleString("id-ID")}</span>
+                      </td>
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                totals.map((t, i) => (
+                  <td key={i} style={tdTotal}>
+                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 14, color, fontWeight: 700 }}>
+                      {(t * 1_000_000).toLocaleString("id-ID")}
+                    </span>
+                  </td>
+                ))
+              )}
+              {multi && <td style={{ ...tdTotal, borderLeft: showMonthly ? "2px solid #E4E8F2" : undefined }}>{changeCell(totals[0], totals[1])}</td>}
             </tr>
           </tfoot>
         </table>
+        </div>{/* /overflowX */}
       </div>
     );
   }
 
   return (
     <div>
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 8, marginBottom: 28, background: balanced ? "rgba(184,245,58,0.08)" : "rgba(248,96,96,0.08)", border: `0.5px solid ${balanced ? "rgba(184,245,58,0.2)" : "rgba(248,96,96,0.2)"}` }}>
-        {balanced ? <CheckCircle2 size={14} color="#B8F53A" /> : <AlertCircle size={14} color="#F86060" />}
-        <p style={{ fontSize: 12, color: balanced ? "#B8F53A" : "#F86060", fontFamily: "JetBrains Mono, monospace" }}>
-          {balanced ? "NERACA SEIMBANG — AKTIVA = PASIVA" : `TIDAK SEIMBANG — SELISIH: ${fmtM(Math.abs(totalAsset - totalLiabEq))}`}
-        </p>
+      {/* Period bar + toolbar */}
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 4 }}>
+        <div style={{ flex: 1 }}><PeriodBar periods={periods} onChange={setPeriods} /></div>
+        <div style={{ display: "flex", gap: 6, alignSelf: "center" }}>
+          <button onClick={() => setShowMonthly(m => !m)}
+            style={{ padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: `1px solid ${showMonthly ? "#3E7CC8" : "#D6DBE8"}`, background: showMonthly ? "rgba(62,124,200,0.07)" : "transparent", color: showMonthly ? "#3E7CC8" : "#697586", cursor: "pointer", whiteSpace: "nowrap" as const }}>
+            Per Bulan
+          </button>
+          <button onClick={() => setPdfOrientation(o => o === "portrait" ? "landscape" : "portrait")}
+            title={`Mode: ${pdfOrientation}`}
+            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #D6DBE8", background: "transparent", color: "#697586", cursor: "pointer", fontSize: 12 }}>
+            {pdfOrientation === "portrait" ? "↕ Portrait" : "↔ Landscape"}
+          </button>
+          <button onClick={() => import("@/lib/pdfExport").then(m => m.exportBalanceSheet(perPeriod[0].assets, perPeriod[0].liabilities, perPeriod[0].equities, perPeriod[0].net, `${MON_ABBR[periods[0].toMonth]} ${periods[0].toYear}`, pdfOrientation))}
+            style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#3E7CC8", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const }}>
+            <BookOpen size={14} /> Export PDF
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <div style={{ ...card }}>
-          <p style={{ fontSize: 13, fontFamily: "Syne, sans-serif", fontWeight: 700, color: "#F2F5EF", marginBottom: 18 }}>AKTIVA</p>
-          <BsSection title="ASET" items={assets} total={totalAsset} color="#60C4F8" />
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize: 13, color: "#F2F5EF", fontWeight: 700 }}>TOTAL AKTIVA</p>
-            <p style={{ fontSize: 18, fontFamily: "JetBrains Mono, monospace", fontWeight: 800, color: "#60C4F8" }}>{fmtM(totalAsset)}</p>
+      {/* Balance status chips */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" as const }}>
+        {perPeriod.map((d, i) => (
+          <div key={periods[i].id} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: 8, background: d.balanced ? "rgba(45,122,79,0.07)" : "rgba(192,60,60,0.08)", border: `1px solid ${d.balanced ? "rgba(45,122,79,0.2)" : "rgba(192,60,60,0.2)"}` }}>
+            {d.balanced ? <CheckCircle2 size={13} color="#2D7A4F" /> : <AlertCircle size={13} color="#C03C3C" />}
+            <span style={{ fontSize: 12, color: d.balanced ? "#2D7A4F" : "#C03C3C", fontFamily: "DM Sans, sans-serif", fontWeight: 500 }}>
+              {periodLabel(periods[i])}: {d.balanced ? "Seimbang" : `Selisih ${fmtM(Math.abs(d.totalAsset - d.totalPassiva))}`}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* AKTIVA */}
+      <BsTable title="AKTIVA" color="#3E7CC8" ids={allAssetIds} getter={d => d.assets} />
+
+      {/* Total Aktiva row */}
+      <div style={{ ...card, padding: "12px 18px", marginBottom: 24, borderLeft: "3px solid #3E7CC8" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <tbody><tr>
+            <td style={{ fontSize: 14, fontWeight: 700, color: "#1A2232", width: "40%" }}>TOTAL AKTIVA</td>
+            {perPeriod.map((d, i) => (
+              <td key={i} style={{ textAlign: "right" }}>
+                <span style={{ fontSize: 16, fontFamily: "JetBrains Mono, monospace", fontWeight: 800, color: "#3E7CC8" }}>{fmtM(d.totalAsset)}</span>
+              </td>
+            ))}
+            {multi && <td style={{ textAlign: "right" }}>{changeCell(perPeriod[0].totalAsset, perPeriod[1].totalAsset)}</td>}
+          </tr></tbody>
+        </table>
+      </div>
+
+      {/* KEWAJIBAN + EKUITAS */}
+      <BsTable title="KEWAJIBAN" color="#C03C3C" ids={allLiabIds} getter={d => d.liabilities} />
+      <BsTable title="EKUITAS" color="#7050C0" ids={allEqIds} getter={d => d.equities} />
+
+      {/* Laba/Rugi Berjalan */}
+      <div style={{ ...card, marginBottom: 16, padding: 0, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <tbody><tr style={{ background: "#FAFBFD" }}>
+            <td style={{ padding: "11px 16px", fontSize: 13, color: "#697586", width: "40%" }}>Laba/(Rugi) Berjalan</td>
+            {perPeriod.map((d, i) => (
+              <td key={i} style={{ padding: "11px 16px", textAlign: "right" }}>
+                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 14, fontWeight: 600, color: d.net >= 0 ? "#2D7A4F" : "#C03C3C" }}>{fmtM(d.net)}</span>
+              </td>
+            ))}
+            {multi && <td style={{ padding: "11px 16px", textAlign: "right" }}>{changeCell(perPeriod[0].net, perPeriod[1].net)}</td>}
+          </tr></tbody>
+        </table>
+      </div>
+
+      {/* Total Pasiva row */}
+      <div style={{ ...card, padding: "12px 18px", borderLeft: "3px solid #7050C0" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <tbody><tr>
+            <td style={{ fontSize: 14, fontWeight: 700, color: "#1A2232", width: "40%" }}>TOTAL KEWAJIBAN + EKUITAS</td>
+            {perPeriod.map((d, i) => (
+              <td key={i} style={{ textAlign: "right" }}>
+                <span style={{ fontSize: 16, fontFamily: "JetBrains Mono, monospace", fontWeight: 800, color: "#7050C0" }}>{fmtM(d.totalPassiva)}</span>
+              </td>
+            ))}
+            {multi && <td style={{ textAlign: "right" }}>{changeCell(perPeriod[0].totalPassiva, perPeriod[1].totalPassiva)}</td>}
+          </tr></tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════ */
+/* ─── Vendor & Customer View ──────────────────────────── */
+const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
+  vendor: "Vendor", customer: "Customer", both: "Vendor & Customer",
+};
+const CONTACT_TYPE_COLOR: Record<ContactType, string> = {
+  vendor: "#3E7CC8", customer: "#2D7A4F", both: "#7050C0",
+};
+
+function VendorView() {
+  const blank: Omit<VendorRecord, "id"> = { code: "", name: "", type: "vendor", phone: "", email: "", address: "", notes: "" };
+  const [vendors, setVendors] = useState<VendorRecord[]>([]);
+  const [form, setForm] = useState<Omit<VendorRecord, "id">>(blank);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState<ContactType | "all">("all");
+
+  const refresh = useCallback(() => { apiGetVendors().then(setVendors).catch(() => setVendors(getVendors())); }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  function handleSave() {
+    if (!form.name.trim()) return;
+    const rec: VendorRecord = { ...form, id: editId || Date.now().toString() };
+    apiSaveVendor(rec).catch(() => saveVendor(rec));
+    setForm(blank); setEditId(null); refresh();
+  }
+
+  function handleEdit(v: VendorRecord) {
+    setForm({ code: v.code, name: v.name, type: v.type, phone: v.phone || "", email: v.email || "", address: v.address || "", notes: v.notes || "" });
+    setEditId(v.id);
+  }
+
+  function handleDelete(id: string) {
+    apiDeleteVendor(id).catch(() => deleteVendor(id));
+    if (editId === id) { setForm(blank); setEditId(null); }
+    refresh();
+  }
+
+  function autoCode() {
+    const prefix = form.type === "vendor" ? "V" : form.type === "customer" ? "C" : "VC";
+    const existing = vendors.filter(v => v.code.startsWith(prefix));
+    const nums = existing.map(v => parseInt(v.code.replace(prefix, ""))).filter(n => !isNaN(n));
+    const next = nums.length === 0 ? 1 : Math.max(...nums) + 1;
+    setForm(f => ({ ...f, code: `${prefix}-${String(next).padStart(4, "0")}` }));
+  }
+
+  const filtered = vendors
+    .filter(v => filterType === "all" || v.type === filterType)
+    .filter(v => !search || v.name.toLowerCase().includes(search.toLowerCase()) || v.code.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 24, alignItems: "start" }}>
+      {/* ── Form ── */}
+      <div style={{ ...card, position: "sticky" as const, top: 0 }}>
+        <p style={{ fontFamily: "Geist, sans-serif", fontWeight: 700, fontSize: 15, color: "#1A2232", marginBottom: 18 }}>
+          {editId ? "Edit Kontak" : "Tambah Kontak"}
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+          <div>
+            <label style={label12}>Tipe</label>
+            <select style={{ ...inp, appearance: "none" as const }} value={form.type}
+              onChange={e => setForm({ ...form, type: e.target.value as ContactType, code: "" })}>
+              {(["vendor", "customer", "both"] as ContactType[]).map(t => (
+                <option key={t} value={t}>{CONTACT_TYPE_LABEL[t]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={label12}>Kode</label>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input style={{ ...inp, flex: 1 }} value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="V-0001" />
+              <button onClick={autoCode}
+                style={{ padding: "0 12px", borderRadius: 8, border: "1px solid rgba(45,122,79,0.25)", background: "rgba(45,122,79,0.06)", color: "#2D7A4F", fontSize: 12, cursor: "pointer", fontFamily: "JetBrains Mono, monospace" }}>
+                Auto
+              </button>
+            </div>
+          </div>
+          <div>
+            <label style={label12}>Nama *</label>
+            <input style={inp} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="PT. Mitra Sejati" />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={label12}>Telepon</label>
+              <input style={inp} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+62 21 xxx" />
+            </div>
+            <div>
+              <label style={label12}>Email</label>
+              <input style={inp} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="kontak@..." />
+            </div>
+          </div>
+          <div>
+            <label style={label12}>Alamat</label>
+            <input style={inp} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Jl. ..." />
+          </div>
+          <div>
+            <label style={label12}>Catatan</label>
+            <input style={inp} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Opsional" />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button onClick={handleSave} disabled={!form.name.trim()}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: form.name.trim() ? "pointer" : "default",
+                background: form.name.trim() ? "#2D7A4F" : "rgba(45,122,79,0.25)",
+                color: "#ffffff", fontWeight: 700, fontSize: 14, fontFamily: "Geist, sans-serif" }}>
+              {editId ? "Simpan" : "Tambah"}
+            </button>
+            {editId && (
+              <button onClick={() => { setForm(blank); setEditId(null); }}
+                style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #E4E8F2", background: "transparent", color: "#697586", fontSize: 14, cursor: "pointer" }}>
+                Batal
+              </button>
+            )}
           </div>
         </div>
+      </div>
 
-        <div style={{ ...card }}>
-          <p style={{ fontSize: 13, fontFamily: "Syne, sans-serif", fontWeight: 700, color: "#F2F5EF", marginBottom: 18 }}>PASIVA</p>
-          <BsSection title="KEWAJIBAN" items={liabilities} total={totalLiability} color="#F86060" />
-          <BsSection title="EKUITAS" items={equities} total={totalEquity} color="#C060F8" />
-          <div style={{ marginBottom: 16 }}>
-            <p style={{ fontSize: 10, color: netIncome >= 0 ? "#B8F53A" : "#F86060", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 8 }}>
-              {netIncome >= 0 ? "LABA BERSIH PERIODE BERJALAN" : "RUGI BERSIH PERIODE BERJALAN"}
-            </p>
+      {/* ── List ── */}
+      <div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" as const }}>
+          <input style={{ ...inp, maxWidth: 220, padding: "8px 12px" }} value={search}
+            onChange={e => setSearch(e.target.value)} placeholder="Cari nama / kode..." />
+          {(["all", "vendor", "customer", "both"] as (ContactType | "all")[]).map(t => (
+            <button key={t} onClick={() => setFilterType(t)}
+              style={{ padding: "7px 14px", borderRadius: 20, fontSize: 13, border: "none", cursor: "pointer",
+                background: filterType === t ? (t === "all" ? "#2D7A4F" : hex(CONTACT_TYPE_COLOR[t as ContactType], 0.12)) : "rgba(0,0,0,0.04)",
+                color: filterType === t ? (t === "all" ? "#ffffff" : CONTACT_TYPE_COLOR[t as ContactType]) : "#697586" }}>
+              {t === "all" ? "Semua" : CONTACT_TYPE_LABEL[t as ContactType]}
+            </button>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={{ ...card, textAlign: "center", padding: "48px 0", color: "#9AA5B4" }}>
+            <Users size={32} style={{ marginBottom: 10, opacity: 0.3 }} />
+            <p style={{ fontSize: 14, color: "#697586" }}>Belum ada vendor / customer.</p>
+          </div>
+        ) : (
+          <div style={{ ...card, padding: 0, overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <tbody>
-                <tr>
-                  <td style={{ padding: "7px 14px", fontSize: 13, color: "#F2F5EF" }}>{netIncome >= 0 ? "Laba Bersih" : "Rugi Bersih"}</td>
-                  <td style={{ textAlign: "right", padding: "7px 14px", fontSize: 13, fontFamily: "JetBrains Mono, monospace", color: netIncome >= 0 ? "#B8F53A" : "#F86060", fontWeight: 600 }}>{fmtM(netIncome)}</td>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #E4E8F2", background: "#FAFBFD" }}>
+                  {[["left","KODE"],["left","NAMA"],["left","TIPE"],["left","KONTAK"],["right",""]].map(([a, l]) => (
+                    <th key={l} style={{ textAlign: a as "left"|"right", padding: "12px 16px", fontSize: 11, color: "#697586", fontFamily: "DM Sans, sans-serif", fontWeight: 600, letterSpacing: "0.5px" }}>{l}</th>
+                  ))}
                 </tr>
+              </thead>
+              <tbody>
+                {filtered.map(v => (
+                  <tr key={v.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)", background: editId === v.id ? "rgba(45,122,79,0.03)" : "transparent" }}>
+                    <td style={{ padding: "11px 16px", fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace" }}>{v.code || "—"}</td>
+                    <td style={{ padding: "11px 16px" }}>
+                      <p style={{ fontSize: 14, color: "#1A2232", fontWeight: 500 }}>{v.name}</p>
+                      {v.address && <p style={{ fontSize: 12, color: "#9AA5B4", marginTop: 2 }}>{v.address}</p>}
+                    </td>
+                    <td style={{ padding: "11px 16px" }}>
+                      <span style={{ fontSize: 12, padding: "3px 9px", borderRadius: 5,
+                        background: hex(CONTACT_TYPE_COLOR[v.type], 0.1),
+                        color: CONTACT_TYPE_COLOR[v.type], fontWeight: 500 }}>
+                        {CONTACT_TYPE_LABEL[v.type]}
+                      </span>
+                    </td>
+                    <td style={{ padding: "11px 16px" }}>
+                      {v.email && <p style={{ fontSize: 13, color: "#697586" }}>{v.email}</p>}
+                      {v.phone && <p style={{ fontSize: 12, color: "#9AA5B4" }}>{v.phone}</p>}
+                    </td>
+                    <td style={{ padding: "11px 16px", textAlign: "right" }}>
+                      <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                        <button onClick={() => handleEdit(v)}
+                          style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E4E8F2", background: "transparent", color: "#697586", cursor: "pointer" }}>
+                          <Edit2 size={12} />
+                        </button>
+                        <button onClick={() => handleDelete(v.id)}
+                          style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(192,60,60,0.2)", background: "transparent", color: "#C03C3C", cursor: "pointer" }}>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize: 13, color: "#F2F5EF", fontWeight: 700 }}>TOTAL PASIVA</p>
-            <p style={{ fontSize: 18, fontFamily: "JetBrains Mono, monospace", fontWeight: 800, color: "#60C4F8" }}>{fmtM(totalLiabEq)}</p>
+        )}
+        <p style={{ fontSize: 12, color: "#9AA5B4", marginTop: 10 }}>{filtered.length} kontak · {vendors.length} total</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Chart of Accounts View ──────────────────────────── */
+const NB_DEFAULT: Record<AccountType, "debit" | "credit"> = {
+  asset: "debit", expense: "debit", liability: "credit", equity: "credit", revenue: "credit",
+};
+const TYPE_PREFIX: Record<AccountType, string> = {
+  asset: "1", liability: "2", equity: "3", revenue: "4", expense: "5",
+};
+
+function suggestCode(type: AccountType, parentId: string | undefined, accounts: ChartAccount[]): string {
+  const pfx = TYPE_PREFIX[type];
+  if (parentId) {
+    const parent = accounts.find(a => a.id === parentId);
+    if (!parent) return "";
+    const groupPrefix = parent.code.slice(0, 4); // e.g. "1-11"
+    const subs = accounts.filter(a => a.parentId === parentId);
+    if (subs.length === 0) return `${groupPrefix}10`;
+    const maxSeq = Math.max(...subs.map(a => parseInt(a.code.slice(-2)) || 0));
+    return `${groupPrefix}${String(maxSeq + 10).padStart(2, "0")}`;
+  }
+  // Main account: find max code of same type with no parent, add 100
+  const mains = accounts.filter(a => a.type === type && !a.parentId);
+  if (mains.length === 0) return `${pfx}-1100`;
+  const nums = mains.map(a => parseInt(a.code.replace("-", ""))).filter(n => !isNaN(n));
+  if (nums.length === 0) return `${pfx}-1100`;
+  const next = Math.max(...nums) + 100;
+  const s = String(next); // e.g. "11200"
+  return `${s[0]}-${s.slice(1)}`;
+}
+
+function COAView() {
+  const blank: Omit<ChartAccount, "id"> = { code: "", name: "", type: "asset", normalBalance: "debit", parentId: undefined };
+  const [accounts, setAccounts] = useState<ChartAccount[]>([]);
+  const [form, setForm] = useState<Omit<ChartAccount, "id">>(blank);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<AccountType | "all">("all");
+  const [search, setSearch] = useState("");
+
+  const refresh = useCallback(() => { apiGetChartAccounts().then(setAccounts).catch(() => setAccounts(getChartAccounts())); }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  function handleAutoCode() {
+    setForm(f => ({ ...f, code: suggestCode(f.type, f.parentId, accounts) }));
+  }
+
+  function handleSave() {
+    if (!form.code.trim() || !form.name.trim()) return;
+    const acc: ChartAccount = { ...form, id: editId || Date.now().toString() };
+    apiSaveChartAccount(acc).catch(() => saveChartAccount(acc));
+    setForm(blank);
+    setEditId(null);
+    refresh();
+  }
+
+  function handleEdit(a: ChartAccount) {
+    setForm({ code: a.code, name: a.name, type: a.type, normalBalance: a.normalBalance, parentId: a.parentId });
+    setEditId(a.id);
+  }
+
+  function handleAddSub(parent: ChartAccount) {
+    const suggested = suggestCode(parent.type, parent.id, accounts);
+    setForm({ code: suggested, name: "", type: parent.type, normalBalance: parent.normalBalance, parentId: parent.id });
+    setEditId(null);
+  }
+
+  function handleDelete(id: string) {
+    apiDeleteChartAccount(id).catch(() => deleteChartAccount(id));
+    if (editId === id) { setForm(blank); setEditId(null); }
+    refresh();
+  }
+
+  const selectedParent = accounts.find(a => a.id === form.parentId);
+
+  // Build tree: main → subs, filtered and searched
+  const matchSearch = (a: ChartAccount) =>
+    !search || a.code.toLowerCase().includes(search.toLowerCase()) || a.name.toLowerCase().includes(search.toLowerCase());
+
+  const typesToShow = filterType === "all" ? ACC_TYPE_ORDER : [filterType];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 24, alignItems: "start" }}>
+      {/* ── Form ── */}
+      <div style={{ ...card, position: "sticky" as const, top: 0 }}>
+        <p style={{ fontFamily: "Geist, sans-serif", fontWeight: 700, fontSize: 15, color: "#1A2232", marginBottom: 18 }}>
+          {editId ? "Edit Akun" : "Tambah Akun"}
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {/* Tipe */}
+          <div>
+            <label style={label12}>Tipe Akun</label>
+            <select style={{ ...inp, appearance: "none" as const, opacity: selectedParent ? 0.5 : 1 }}
+              value={form.type} disabled={!!selectedParent}
+              onChange={e => {
+                const t = e.target.value as AccountType;
+                setForm({ ...form, type: t, normalBalance: NB_DEFAULT[t], parentId: undefined, code: "" });
+              }}>
+              {ACC_TYPE_ORDER.map(t => <option key={t} value={t}>{ACC_TYPE_LABEL[t]}</option>)}
+            </select>
+          </div>
+
+          {/* Induk Akun */}
+          <div>
+            <label style={label12}>Induk Akun <span style={{ color: "#697586" }}>(opsional — kosongkan untuk akun utama)</span></label>
+            <select style={{ ...inp, appearance: "none" as const }} value={form.parentId || ""}
+              onChange={e => {
+                const pid = e.target.value || undefined;
+                const parent = accounts.find(a => a.id === pid);
+                setForm(f => ({
+                  ...f,
+                  parentId: pid,
+                  type: parent ? parent.type : f.type,
+                  normalBalance: parent ? parent.normalBalance : NB_DEFAULT[f.type],
+                  code: "",
+                }));
+              }}>
+              <option value="">— Akun Utama (tidak ada induk) —</option>
+              {accounts.filter(a => !a.parentId).map(a => (
+                <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Kode Akun + Auto */}
+          <div>
+            <label style={label12}>Kode Akun *</label>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input style={{ ...inp, flex: 1 }} value={form.code}
+                onChange={e => setForm({ ...form, code: e.target.value })}
+                placeholder={form.parentId ? (selectedParent ? `${selectedParent.code.slice(0,4)}10` : "1-1110") : "1-1100"} />
+              <button onClick={handleAutoCode}
+                title="Generate kode otomatis"
+                style={{ padding: "0 12px", borderRadius: 8, border: "0.5px solid rgba(45,122,79,0.25)", background: "rgba(45,122,79,0.06)", color: "#2D7A4F", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" as const, fontFamily: "JetBrains Mono, monospace" }}>
+                Auto
+              </button>
+            </div>
+            {/* guidance */}
+            <p style={{ fontSize: 12, color: "#697586", marginTop: 5, fontFamily: "JetBrains Mono, monospace", lineHeight: 1.6 }}>
+              {form.parentId
+                ? `Sub-akun dari ${selectedParent?.code} · format: ${selectedParent?.code.slice(0,4) || "X-XX"}10, ${selectedParent?.code.slice(0,4) || "X-XX"}20, …`
+                : `Akun utama ${ACC_TYPE_LABEL[form.type]} · format: ${TYPE_PREFIX[form.type]}-XX00 · contoh: ${TYPE_PREFIX[form.type]}-1100`
+              }
+            </p>
+          </div>
+
+          {/* Nama */}
+          <div>
+            <label style={label12}>Nama Akun *</label>
+            <input style={inp} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Kas" />
+          </div>
+
+          {/* Saldo Normal */}
+          <div>
+            <label style={label12}>Saldo Normal</label>
+            <select style={{ ...inp, appearance: "none" as const }} value={form.normalBalance}
+              onChange={e => setForm({ ...form, normalBalance: e.target.value as "debit" | "credit" })}>
+              <option value="debit">Debit</option>
+              <option value="credit">Kredit</option>
+            </select>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button onClick={handleSave} disabled={!form.code.trim() || !form.name.trim()}
+              style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none",
+                cursor: form.code.trim() && form.name.trim() ? "pointer" : "default",
+                background: form.code.trim() && form.name.trim() ? "#2D7A4F" : "rgba(45,122,79,0.25)",
+                color: "#ffffff", fontWeight: 700, fontSize: 14, fontFamily: "DM Sans, sans-serif" }}>
+              {editId ? "Simpan Perubahan" : "Tambah Akun"}
+            </button>
+            {(editId || form.parentId || form.code || form.name) && (
+              <button onClick={() => { setForm(blank); setEditId(null); }}
+                style={{ padding: "10px 16px", borderRadius: 8, border: "0.5px solid rgba(0,0,0,0.08)", background: "transparent", color: "#697586", fontSize: 14, cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}>
+                Reset
+              </button>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* ── Tree List ── */}
+      <div>
+        {/* Filter + Search */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" as const }}>
+          <input style={{ ...inp, maxWidth: 200, padding: "8px 12px" }} value={search}
+            onChange={e => setSearch(e.target.value)} placeholder="Cari kode / nama..." />
+          {(["all", ...ACC_TYPE_ORDER] as (AccountType | "all")[]).map(t => (
+            <button key={t} onClick={() => setFilterType(t)}
+              style={{ padding: "7px 14px", borderRadius: 20, fontSize: 13, border: "none", cursor: "pointer", fontFamily: "DM Sans, sans-serif",
+                background: filterType === t ? (t === "all" ? "#2D7A4F" : hex(ACC_TYPE_COLOR[t], 0.18)) : "rgba(0,0,0,0.03)",
+                color: filterType === t ? (t === "all" ? "#ffffff" : ACC_TYPE_COLOR[t]) : "#9AA5B4" }}>
+              {t === "all" ? "SEMUA" : ACC_TYPE_LABEL[t]}
+            </button>
+          ))}
+        </div>
+
+        {typesToShow.map(type => {
+          const mains = accounts
+            .filter(a => a.type === type && !a.parentId)
+            .filter(a => search ? matchSearch(a) || accounts.some(s => s.parentId === a.id && matchSearch(s)) : true)
+            .sort((a, b) => a.code.localeCompare(b.code));
+          if (mains.length === 0) return null;
+
+          return (
+            <div key={type} style={{ marginBottom: 20 }}>
+              {/* Type header */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 12, color: ACC_TYPE_COLOR[type], fontFamily: "JetBrains Mono, monospace", letterSpacing: "1.5px", fontWeight: 700 }}>
+                  {ACC_TYPE_LABEL[type].toUpperCase()}
+                </span>
+                <div style={{ flex: 1, height: "0.5px", background: hex(ACC_TYPE_COLOR[type], 0.2) }} />
+                <span style={{ fontSize: 12, color: ACC_TYPE_COLOR[type], fontFamily: "JetBrains Mono, monospace" }}>
+                  {accounts.filter(a => a.type === type).length} akun
+                </span>
+              </div>
+
+              <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+                {mains.map((main, mi) => {
+                  const subs = accounts
+                    .filter(a => a.parentId === main.id)
+                    .filter(a => !search || matchSearch(a))
+                    .sort((a, b) => a.code.localeCompare(b.code));
+                  const isLast = mi === mains.length - 1;
+
+                  return (
+                    <div key={main.id}>
+                      {/* Main account row */}
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 8, padding: "11px 16px",
+                        borderBottom: (!isLast || subs.length > 0) ? "0.5px solid rgba(0,0,0,0.04)" : "none",
+                        background: editId === main.id ? "rgba(184,245,58,0.04)" : "transparent",
+                      }}>
+                        <span style={{ fontSize: 13, color: ACC_TYPE_COLOR[type], fontFamily: "JetBrains Mono, monospace", minWidth: 68, fontWeight: 600 }}>{main.code}</span>
+                        <span style={{ fontSize: 14, color: "#1A2232", flex: 1, fontWeight: 500 }}>{main.name}</span>
+                        {subs.length > 0 && (
+                          <span style={{ fontSize: 12, padding: "2px 7px", borderRadius: 4, background: hex(ACC_TYPE_COLOR[type], 0.1), color: ACC_TYPE_COLOR[type], fontFamily: "JetBrains Mono, monospace" }}>
+                            {subs.length} sub
+                          </span>
+                        )}
+                        <span style={{ fontSize: 13, color: main.normalBalance === "debit" ? "#3E7CC8" : "#2D7A4F", fontFamily: "JetBrains Mono, monospace", minWidth: 44 }}>
+                          {main.normalBalance === "debit" ? "Dr" : "Cr"}
+                        </span>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => handleAddSub(main)} title="Tambah sub-akun"
+                            style={{ padding: "4px 8px", borderRadius: 5, fontSize: 12, border: `0.5px solid ${hex(ACC_TYPE_COLOR[type], 0.3)}`, background: hex(ACC_TYPE_COLOR[type], 0.06), color: ACC_TYPE_COLOR[type], cursor: "pointer", fontFamily: "JetBrains Mono, monospace" }}>
+                            + Sub
+                          </button>
+                          <button onClick={() => handleEdit(main)}
+                            style={{ padding: "4px 8px", borderRadius: 5, border: "0.5px solid rgba(0,0,0,0.06)", background: "transparent", color: "#697586", cursor: "pointer" }}>
+                            <Edit2 size={11} />
+                          </button>
+                          <button onClick={() => handleDelete(main.id)}
+                            style={{ padding: "4px 8px", borderRadius: 5, border: "0.5px solid rgba(248,96,96,0.15)", background: "transparent", color: "#C03C3C", cursor: "pointer" }}>
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Sub-account rows */}
+                      {subs.map((sub, si) => (
+                        <div key={sub.id} style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          padding: "9px 16px 9px 36px",
+                          borderBottom: (si < subs.length - 1 || !isLast) ? "0.5px solid rgba(0,0,0,0.03)" : "none",
+                          background: editId === sub.id ? "rgba(45,122,79,0.04)" : "#FAFBFD",
+                        }}>
+                          <span style={{ fontSize: 12, color: "#697586", fontFamily: "JetBrains Mono, monospace", marginRight: 2 }}>↳</span>
+                          <span style={{ fontSize: 13, color: "#697586", fontFamily: "JetBrains Mono, monospace", minWidth: 68 }}>{sub.code}</span>
+                          <span style={{ fontSize: 13, color: "rgba(242,245,239,0.75)", flex: 1 }}>{sub.name}</span>
+                          <span style={{ fontSize: 13, color: sub.normalBalance === "debit" ? "#3E7CC8" : "#2D7A4F", fontFamily: "JetBrains Mono, monospace", minWidth: 44 }}>
+                            {sub.normalBalance === "debit" ? "Dr" : "Cr"}
+                          </span>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button onClick={() => handleEdit(sub)}
+                              style={{ padding: "4px 8px", borderRadius: 5, border: "0.5px solid rgba(0,0,0,0.06)", background: "transparent", color: "#697586", cursor: "pointer" }}>
+                              <Edit2 size={11} />
+                            </button>
+                            <button onClick={() => handleDelete(sub.id)}
+                              style={{ padding: "4px 8px", borderRadius: 5, border: "0.5px solid rgba(248,96,96,0.15)", background: "transparent", color: "#C03C3C", cursor: "pointer" }}>
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        <p style={{ fontSize: 13, color: "#697586", marginTop: 8 }}>
+          {accounts.filter(a => !a.parentId).length} akun utama · {accounts.filter(a => !!a.parentId).length} sub-akun · {accounts.length} total
+        </p>
       </div>
     </div>
   );
@@ -1483,6 +2653,7 @@ export default function Dashboard() {
   const [view, setView] = useState<View>("sub:all");
   const [subOpen, setSubOpen] = useState(true);
   const [finOpen, setFinOpen] = useState(true);
+  const [kontOpen, setKontOpen] = useState(true);
   const [accOpen, setAccOpen] = useState(true);
   const [subCount, setSubCount] = useState(0);
 
@@ -1514,6 +2685,8 @@ export default function Dashboard() {
     "trial-balance": { label: "Neraca Saldo", breadcrumb: "AKUNTANSI / NERACA SALDO" },
     "profit-loss": { label: "Laporan Laba Rugi", breadcrumb: "AKUNTANSI / LABA RUGI" },
     "balance-sheet": { label: "Neraca Keuangan", breadcrumb: "AKUNTANSI / NERACA" },
+    "coa": { label: "Chart of Accounts", breadcrumb: "AKUNTANSI / COA" },
+    "vendors": { label: "Vendor & Customer", breadcrumb: "AKUNTANSI / VENDOR & CUSTOMER" },
   };
 
   const isSubmissionView = view.startsWith("sub:");
@@ -1526,21 +2699,23 @@ export default function Dashboard() {
     return (
       <button onClick={() => setView(v)} style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        width: "100%", padding: indent ? "7px 12px 7px 28px" : "9px 12px",
-        borderRadius: 7, marginBottom: 1, border: "none", cursor: "pointer", textAlign: "left",
-        background: active ? "rgba(184,245,58,0.1)" : "transparent",
+        width: "100%", padding: indent ? "6px 12px 6px 32px" : "8px 12px",
+        borderRadius: 6, marginBottom: 1, border: "none", cursor: "pointer", textAlign: "left",
+        background: active ? "rgba(255,255,255,0.1)" : "transparent",
+        borderLeft: active ? "3px solid #6FCF97" : "3px solid transparent",
+        transition: "background 0.15s",
       }}
-        onMouseOver={e => { if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+        onMouseOver={e => { if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
         onMouseOut={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          {icon && <span style={{ color: active ? "#B8F53A" : "#7A9E85", display: "flex", flexShrink: 0 }}>{icon}</span>}
-          <span style={{ fontSize: indent ? 12 : 13, fontFamily: "DM Sans, sans-serif", fontWeight: active ? 600 : 400, color: active ? "#F2F5EF" : "#7A9E85", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {icon && <span style={{ color: active ? "#6FCF97" : "rgba(255,255,255,0.4)", display: "flex", flexShrink: 0 }}>{icon}</span>}
+          <span style={{ fontSize: indent ? 13 : 14, fontFamily: "DM Sans, sans-serif", fontWeight: active ? 600 : 500, color: active ? "#FFFFFF" : "rgba(255,255,255,0.78)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {label}
           </span>
         </div>
         {count !== undefined && count > 0 && (
-          <span style={{ fontSize: 10, fontFamily: "JetBrains Mono, monospace", background: active ? "#B8F53A" : "rgba(184,245,58,0.12)", color: active ? "#0D2B1E" : "#B8F53A", borderRadius: 100, padding: "1px 6px", fontWeight: 700, flexShrink: 0 }}>{count}</span>
+          <span style={{ fontSize: 12, fontFamily: "JetBrains Mono, monospace", background: active ? "#6FCF97" : "rgba(111,207,151,0.2)", color: active ? "#1A2C24" : "#6FCF97", borderRadius: 100, padding: "1px 7px", fontWeight: 700, flexShrink: 0 }}>{count}</span>
         )}
       </button>
     );
@@ -1548,8 +2723,8 @@ export default function Dashboard() {
 
   function SectionHeader({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
     return (
-      <button onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "4px 12px", background: "transparent", border: "none", cursor: "pointer", marginBottom: 4 }}>
-        <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: "1.5px", fontFamily: "JetBrains Mono, monospace" }}>{label}</p>
+      <button onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "4px 12px", background: "transparent", border: "none", cursor: "pointer", marginBottom: 2 }}>
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: "1.4px", fontFamily: "DM Sans, sans-serif", fontWeight: 600 }}>{label}</p>
         {open ? <ChevronUp size={10} color="rgba(255,255,255,0.3)" /> : <ChevronDown size={10} color="rgba(255,255,255,0.3)" />}
       </button>
     );
@@ -1562,33 +2737,33 @@ export default function Dashboard() {
   }, {} as Record<FormType, number>);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0B0F0E", display: "flex" }}>
+    <div style={{ minHeight: "100vh", background: "#F0F2F7", display: "flex" }}>
 
       {/* ── Sidebar ── */}
       <aside style={{
-        width: 248, flexShrink: 0, background: "#070D09",
-        borderRight: "0.5px solid rgba(255,255,255,0.06)",
+        width: 252, flexShrink: 0,
+        background: "linear-gradient(180deg, #1B2F22 0%, #162618 100%)",
         display: "flex", flexDirection: "column",
         position: "sticky", top: 0, height: "100vh", overflowY: "auto",
       }}>
         {/* Logo */}
-        <div style={{ padding: "24px 20px 20px", borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ padding: "22px 18px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg, #1A5C35, #0D2B1E)", border: "0.5px solid rgba(184,245,58,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <LayoutDashboard size={14} color="#B8F53A" />
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg, #4CAF7A, #2D7A4F)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(45,122,79,0.4)" }}>
+              <LayoutDashboard size={16} color="#ffffff" />
             </div>
             <div>
-              <p style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 13, color: "#F2F5EF", lineHeight: 1.2 }}>RENEWA</p>
-              <p style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 8, color: "#B8F53A", letterSpacing: "2px" }}>ADMIN</p>
+              <p style={{ fontFamily: "Geist, sans-serif", fontWeight: 800, fontSize: 15, color: "#FFFFFF", lineHeight: 1.1, letterSpacing: "0.5px" }}>RENEWA</p>
+              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: 11, color: "#6FCF97", letterSpacing: "2px", fontWeight: 600, marginTop: 2 }}>ADMIN PANEL</p>
             </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: "14px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+        <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
 
           {/* SUBMISSIONS section */}
-          <div>
+          <div style={{ marginBottom: 4 }}>
             <SectionHeader label="SUBMISSIONS" open={subOpen} onToggle={() => setSubOpen(!subOpen)} />
             {subOpen && (
               <div>
@@ -1603,7 +2778,7 @@ export default function Dashboard() {
           </div>
 
           {/* KEUANGAN section */}
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginBottom: 4 }}>
             <SectionHeader label="KEUANGAN" open={finOpen} onToggle={() => setFinOpen(!finOpen)} />
             {finOpen && (
               <div>
@@ -1614,10 +2789,12 @@ export default function Dashboard() {
           </div>
 
           {/* AKUNTANSI section */}
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginBottom: 4 }}>
             <SectionHeader label="AKUNTANSI" open={accOpen} onToggle={() => setAccOpen(!accOpen)} />
             {accOpen && (
               <div>
+                <NavBtn v="vendors" label="Vendor & Customer" icon={<Users size={14} />} />
+                <NavBtn v="coa" label="Chart of Accounts" icon={<BookOpen size={14} />} />
                 <NavBtn v="journal" label="Jurnal Umum" icon={<BookOpen size={14} />} />
                 <NavBtn v="ledger" label="Buku Besar" icon={<BookMarked size={14} />} />
                 <NavBtn v="trial-balance" label="Neraca Saldo" icon={<Calculator size={14} />} />
@@ -1628,40 +2805,51 @@ export default function Dashboard() {
           </div>
 
           {/* KONTEN section */}
-          <div style={{ marginTop: 8 }}>
-            <p style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: "1.5px", fontFamily: "JetBrains Mono, monospace", padding: "4px 12px", marginBottom: 4 }}>KONTEN</p>
-            <NavBtn v="news" label="News & Insights" icon={<Newspaper size={14} />} />
-            <NavBtn v="careers" label="Careers" icon={<Briefcase size={14} />} />
+          <div style={{ marginBottom: 4 }}>
+            <SectionHeader label="KONTEN" open={kontOpen} onToggle={() => setKontOpen(!kontOpen)} />
+            {kontOpen && (
+              <div>
+                <NavBtn v="news" label="News & Insights" icon={<Newspaper size={14} />} />
+                <NavBtn v="careers" label="Careers" icon={<Briefcase size={14} />} />
+              </div>
+            )}
           </div>
         </nav>
 
         {/* Bottom */}
-        <div style={{ padding: "12px 10px 20px", borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
-          <p style={{ fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", padding: "6px 12px", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>admin@renewa.asia</p>
+        <div style={{ padding: "12px 10px 20px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", marginBottom: 6 }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(111,207,151,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 13, color: "#6FCF97", fontWeight: 700 }}>A</span>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", fontFamily: "DM Sans, sans-serif", fontWeight: 500 }}>Admin</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontFamily: "DM Sans, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>admin@renewa.asia</p>
+            </div>
+          </div>
           <button onClick={handleLogout} style={{
             display: "flex", alignItems: "center", gap: 8, width: "100%",
-            padding: "8px 12px", borderRadius: 7, fontSize: 12, cursor: "pointer",
-            background: "transparent", border: "0.5px solid rgba(255,107,107,0.15)",
-            color: "#7A9E85", fontFamily: "DM Sans, sans-serif",
+            padding: "8px 12px", borderRadius: 6, fontSize: 13, cursor: "pointer",
+            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+            color: "rgba(255,255,255,0.5)", fontFamily: "DM Sans, sans-serif",
           }}
-            onMouseOver={e => { e.currentTarget.style.background = "rgba(255,107,107,0.08)"; e.currentTarget.style.color = "#ff6b6b"; }}
-            onMouseOut={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#7A9E85"; }}
+            onMouseOver={e => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; e.currentTarget.style.color = "#FCA5A5"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)"; }}
+            onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
           >
-            <LogOut size={13} /> Logout
+            <LogOut size={13} /> Keluar
           </button>
         </div>
       </aside>
 
       {/* ── Content ── */}
       <main style={{ flex: 1, minWidth: 0, padding: "32px 40px", overflowY: "auto" }}>
-        <div style={{ marginBottom: 28 }}>
-          <p style={{ fontSize: 10, color: "#7A9E85", fontFamily: "JetBrains Mono, monospace", letterSpacing: "1px", marginBottom: 6 }}>
+        <div style={{ marginBottom: 32 }}>
+          <p style={{ fontSize: 13, color: "#9AA5B4", fontFamily: "DM Sans, sans-serif", letterSpacing: "0.3px", marginBottom: 6 }}>
             {viewMeta[view].breadcrumb}
           </p>
-          <h1 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 24, color: "#F2F5EF", letterSpacing: -0.5, marginBottom: 8 }}>
+          <h1 style={{ fontFamily: "Geist, sans-serif", fontWeight: 800, fontSize: 26, color: "#1A2232", letterSpacing: -0.5, marginBottom: 0 }}>
             {viewMeta[view].label}
           </h1>
-          <div style={{ width: 28, height: 2, background: "#B8F53A", borderRadius: 1 }} />
         </div>
 
         {isSubmissionView && <SubmissionsView formType={activeFormType} />}
@@ -1669,6 +2857,8 @@ export default function Dashboard() {
         {view === "careers" && <CareersView />}
         {view === "finance" && <FinanceView />}
         {view === "investors" && <InvestorsView />}
+        {view === "vendors" && <VendorView />}
+        {view === "coa" && <COAView />}
         {view === "journal" && <JournalView />}
         {view === "ledger" && <LedgerView />}
         {view === "trial-balance" && <TrialBalanceView />}

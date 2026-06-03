@@ -275,6 +275,7 @@ export interface ChartAccount {
   name: string;
   type: AccountType;
   normalBalance: "debit" | "credit";
+  parentId?: string;
 }
 
 export interface JournalLine {
@@ -289,6 +290,44 @@ export interface JournalEntry {
   date: string;
   description: string;
   lines: JournalLine[];
+  contactId?: string;  // vendor or customer id
+}
+
+/* ─── Vendors / Customers ────────────────────────────── */
+export const VENDORS_KEY = "renewa_vendors";
+
+export type ContactType = "vendor" | "customer" | "both";
+
+export interface VendorRecord {
+  id: string;
+  code: string;
+  name: string;
+  type: ContactType;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+}
+
+const DEFAULT_VENDORS: VendorRecord[] = [];
+
+export function getVendors(): VendorRecord[] {
+  if (typeof window === "undefined") return DEFAULT_VENDORS;
+  try {
+    const s = localStorage.getItem(VENDORS_KEY);
+    return s ? JSON.parse(s) : DEFAULT_VENDORS;
+  } catch { return DEFAULT_VENDORS; }
+}
+
+export function saveVendor(v: VendorRecord): void {
+  const all = getVendors();
+  const idx = all.findIndex(x => x.id === v.id);
+  if (idx >= 0) all[idx] = v; else all.push(v);
+  localStorage.setItem(VENDORS_KEY, JSON.stringify(all));
+}
+
+export function deleteVendor(id: string): void {
+  localStorage.setItem(VENDORS_KEY, JSON.stringify(getVendors().filter(v => v.id !== id)));
 }
 
 const DEFAULT_ACCOUNTS: ChartAccount[] = [
