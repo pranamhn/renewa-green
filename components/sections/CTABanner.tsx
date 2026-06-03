@@ -22,15 +22,20 @@ export default function CTABanner() {
   const t = dict[lang];
 
   return (
-    <section style={{ padding: "80px 40px", background: "#B8F53A" }}>
+    <section className="cta-section" style={{ padding: "80px 40px", background: "#B8F53A" }}>
       <style>{`
         .cta-btn-dark:hover { background: #0B0F0E !important; }
         .cta-btn-outline:hover { background: rgba(0,0,0,0.06) !important; }
+        @media (max-width: 768px) {
+          .cta-section { padding: 56px 20px !important; }
+          .cta-inner { flex-direction: column !important; align-items: flex-start !important; }
+          .cta-title { font-size: 28px !important; }
+        }
       `}</style>
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 32 }}>
+      <div className="cta-inner" style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 32 }}>
         <div>
           <p style={{ fontSize: 11, letterSpacing: "2px", textTransform: "uppercase", color: "#1A5C35", marginBottom: 12, fontWeight: 500 }}>{t.eyebrow}</p>
-          <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(28px, 4vw, 44px)", color: "#0B0F0E", letterSpacing: -1.5, lineHeight: 1.05, maxWidth: 540 }}>
+          <h2 className="cta-title" style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(28px, 4vw, 44px)", color: "#0B0F0E", letterSpacing: -1.5, lineHeight: 1.05, maxWidth: 540 }}>
             {t.title}
           </h2>
         </div>

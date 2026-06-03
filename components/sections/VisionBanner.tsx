@@ -26,8 +26,15 @@ export default function VisionBanner() {
   const t = dict[lang];
 
   return (
-    <div style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)", borderLeft: "none", borderRight: "none", padding: "32px 40px" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
+    <div className="vision-banner" style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.07)", borderLeft: "none", borderRight: "none", padding: "32px 40px" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .vision-banner { padding: 28px 20px !important; }
+          .vision-inner { flex-direction: column !important; align-items: flex-start !important; }
+          .vision-stats { gap: 24px !important; flex-wrap: wrap !important; width: 100% !important; }
+        }
+      `}</style>
+      <div className="vision-inner" style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
         <div>
           <p style={{ fontSize: 10, color: "#B8F53A", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 8 }}>● Vision 2035</p>
           <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(20px, 3vw, 28px)", color: "#fff", letterSpacing: -1 }}>
@@ -35,7 +42,7 @@ export default function VisionBanner() {
           </h2>
           <p style={{ fontSize: 14, color: "#7A9E85", marginTop: 4, fontWeight: 300 }}>{t.desc}</p>
         </div>
-        <div style={{ display: "flex", gap: 40, flexShrink: 0, flexWrap: "wrap" }}>
+        <div className="vision-stats" style={{ display: "flex", gap: 40, flexShrink: 0, flexWrap: "wrap" }}>
           {statValues.map((s, i) => (
             <div key={i} style={{ textAlign: "center" }}>
               <p style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 28, fontWeight: 500, color: "#B8F53A" }}>

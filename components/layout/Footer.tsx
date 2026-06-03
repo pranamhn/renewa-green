@@ -35,9 +35,18 @@ export default function Footer() {
 
   return (
     <footer style={{ background: "#0B0F0E", borderTop: "0.5px solid rgba(255,255,255,0.06)", paddingTop: 64, paddingBottom: 32 }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 40px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
-          <div>
+      <style>{`
+        @media (max-width: 768px) {
+          .footer-inner { padding: 0 20px !important; }
+          .footer-grid { grid-template-columns: 1fr 1fr !important; gap: 28px !important; }
+          .footer-brand { grid-column: 1 / -1 !important; }
+          .footer-bottom { flex-direction: column !important; align-items: flex-start !important; gap: 6px !important; }
+          .footer-bottom p { font-size: 11px !important; }
+        }
+      `}</style>
+      <div className="footer-inner" style={{ maxWidth: 1280, margin: "0 auto", padding: "0 40px" }}>
+        <div className="footer-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
+          <div className="footer-brand">
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 16 }}>
               <span style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 20, color: "#fff" }}>RENEWA</span>
               <span style={{ fontFamily: "DM Sans, sans-serif", fontWeight: 800, fontSize: 20, color: "#7A9E85", letterSpacing: -0.15, textTransform: "uppercase" }}>ASIA</span>
@@ -67,7 +76,7 @@ export default function Footer() {
           ))}
         </div>
 
-        <div style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="footer-bottom" style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)" }}>
             © {year} PT Renewa Green Energy. All rights reserved.
           </p>

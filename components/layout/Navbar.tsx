@@ -81,6 +81,11 @@ export default function Navbar() {
 
   return (
     <>
+      <style>{`
+        @media (max-width: 768px) {
+          .nav-inner { padding: 0 20px !important; }
+        }
+      `}</style>
       <nav
         className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 nav-blur"
         style={{
@@ -88,7 +93,7 @@ export default function Navbar() {
           borderBottom: scrolled ? "0.5px solid rgba(255,255,255,0.06)" : "none",
         }}
       >
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 40px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="nav-inner" style={{ maxWidth: 1280, margin: "0 auto", padding: "0 40px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link href="/" style={{ display: "flex", alignItems: "baseline", gap: 8, textDecoration: "none" }}>
             <span style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 24, color: "#fff", letterSpacing: -0.5 }}>RENEWA</span>
             <span style={{ fontFamily: "DM Sans, sans-serif", fontWeight: 800, fontSize: 24, color: "#B8F53A", letterSpacing: -0.5, textTransform: "uppercase" }}>ASIA</span>

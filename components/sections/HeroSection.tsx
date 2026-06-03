@@ -53,7 +53,16 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", overflow: "hidden", padding: "120px 40px 80px" }}>
+    <section className="hero-section" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", overflow: "hidden", padding: "120px 40px 80px" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .hero-section { padding: 100px 20px 60px !important; }
+          .hero-h1 { font-size: clamp(36px, 9vw, 60px) !important; letter-spacing: -1px !important; }
+          .hero-desc { font-size: 15px !important; }
+          .hero-stats { gap: 24px !important; padding-top: 28px !important; margin-top: 40px !important; flex-wrap: wrap !important; }
+          .hero-stat { min-width: 40%; }
+        }
+      `}</style>
       <div style={{ position: "absolute", inset: 0, zIndex: 0, backgroundImage: `radial-gradient(circle at 20% 50%, rgba(26,92,53,0.12) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(184,245,58,0.04) 0%, transparent 50%)` }} />
       <div style={{ position: "absolute", inset: 0, zIndex: 0, backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`, backgroundSize: "64px 64px" }} />
 
@@ -63,12 +72,12 @@ export default function HeroSection() {
           <span style={{ fontSize: 11, letterSpacing: "1.5px", textTransform: "uppercase", color: "#B8F53A", fontWeight: 500 }}>PT Renewa Green Energy</span>
         </div>
 
-        <h1 ref={h1Ref} style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(44px, 7vw, 80px)", lineHeight: 1.02, letterSpacing: "-3px", color: "#fff", marginBottom: 24, maxWidth: 720 }}>
+        <h1 ref={h1Ref} className="hero-h1" style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(44px, 7vw, 80px)", lineHeight: 1.02, letterSpacing: "-3px", color: "#fff", marginBottom: 24, maxWidth: 720 }}>
           {t.h1a}<br />
           <span style={{ color: "#B8F53A" }}>{t.h1b}</span>
         </h1>
 
-        <p style={{ fontSize: 17, color: "#7A9E85", lineHeight: 1.75, maxWidth: 520, marginBottom: 40, fontWeight: 300 }}>
+        <p className="hero-desc" style={{ fontSize: 17, color: "#7A9E85", lineHeight: 1.75, maxWidth: 520, marginBottom: 40, fontWeight: 300 }}>
           {t.desc}
         </p>
 
@@ -87,9 +96,9 @@ export default function HeroSection() {
           </Link>
         </div>
 
-        <div style={{ display: "flex", gap: 40, marginTop: 64, paddingTop: 40, borderTop: "0.5px solid rgba(255,255,255,0.07)", flexWrap: "wrap" }}>
+        <div className="hero-stats" style={{ display: "flex", gap: 40, marginTop: 64, paddingTop: 40, borderTop: "0.5px solid rgba(255,255,255,0.07)", flexWrap: "wrap" }}>
           {t.stats.map((s) => (
-            <div key={s.num}>
+            <div className="hero-stat" key={s.num}>
               <p style={{ fontFamily: "JetBrains Mono, monospace", fontSize: 28, fontWeight: 500, color: "#B8F53A", lineHeight: 1 }}>{s.num}</p>
               <p style={{ fontSize: 13, color: "#F2F5EF", marginTop: 4 }}>{s.label}</p>
               <p style={{ fontSize: 11, color: "#7A9E85", marginTop: 2 }}>{s.sub}</p>

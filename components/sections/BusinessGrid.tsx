@@ -56,7 +56,7 @@ export default function BusinessGrid() {
   const t = dict[lang];
 
   return (
-    <section style={{ padding: "96px 40px", background: "#0B0F0E" }}>
+    <section className="biz-section" style={{ padding: "96px 40px", background: "#0B0F0E" }}>
       <style>{`
         .biz-card {
           transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
@@ -67,14 +67,20 @@ export default function BusinessGrid() {
         .biz-card:hover .accent-bar { transform: scaleX(1); }
         .biz-cta { transition: background 0.2s ease, color 0.2s ease, gap 0.2s ease; display: inline-flex; align-items: center; gap: 6px; }
         .biz-card:hover .biz-cta { background: rgba(184,245,58,0.15) !important; gap: 10px !important; }
+        @media (max-width: 768px) {
+          .biz-section { padding: 64px 20px !important; }
+          .biz-grid { grid-template-columns: 1fr !important; }
+          .biz-card { padding: 24px 20px 20px !important; }
+          .biz-h2 { margin-bottom: 32px !important; }
+        }
       `}</style>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
         <SectionLabel text={t.label} />
-        <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(30px, 4vw, 44px)", color: "#fff", letterSpacing: -1, marginBottom: 56, maxWidth: 520 }}>
+        <h2 className="biz-h2" style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(30px, 4vw, 44px)", color: "#fff", letterSpacing: -1, marginBottom: 56, maxWidth: 520 }}>
           {t.h2} <span style={{ color: "#B8F53A" }}>{t.h2Accent}</span>
         </h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+        <div className="biz-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
           {units.map((u) => (
             <div key={u.num} className="biz-card" style={{ background: "#0D2B1E", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "36px 36px 28px", position: "relative", overflow: "hidden" }}>
               <div className="accent-bar" style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#B8F53A,#2E8B57)", borderRadius: "16px 16px 0 0" }} />

@@ -26,18 +26,22 @@ export default function RoadmapSection() {
   const t = dict[lang];
 
   return (
-    <section style={{ padding: "72px 40px", background: "#0B0F0E" }}>
+    <section className="roadmap-section" style={{ padding: "72px 40px", background: "#0B0F0E" }}>
       <style>{`
         .roadmap-scroll::-webkit-scrollbar { height: 4px; }
         .roadmap-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 2px; }
         .roadmap-scroll::-webkit-scrollbar-thumb { background: rgba(184,245,58,0.35); border-radius: 2px; }
         .roadmap-scroll::-webkit-scrollbar-thumb:hover { background: rgba(184,245,58,0.6); }
+        @media (max-width: 768px) {
+          .roadmap-section { padding: 56px 20px !important; }
+          .roadmap-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; margin-bottom: 20px !important; }
+        }
       `}</style>
 
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
         <SectionLabel text="Roadmap" />
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
+        <div className="roadmap-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
           <h2 style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: "clamp(28px, 4vw, 40px)", color: "#fff", letterSpacing: -1 }}>
             Journey to <span style={{ color: "#B8F53A" }}>2035</span>
           </h2>
