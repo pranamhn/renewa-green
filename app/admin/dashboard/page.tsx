@@ -1526,6 +1526,22 @@ function periodLabel(p: ReportPeriod): string {
   return `${MON_ABBR[p.fromMonth]} ${p.fromYear} – ${MON_ABBR[p.toMonth]} ${p.toYear}`;
 }
 
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function periodRangeSentence(periods: ReportPeriod[]): string {
+  const from = periods.reduce((earliest, p) => {
+    const a = new Date(p.fromYear, p.fromMonth, 1).getTime();
+    const b = new Date(earliest.fromYear, earliest.fromMonth, 1).getTime();
+    return a < b ? p : earliest;
+  }, periods[0]);
+  const to = periods.reduce((latest, p) => {
+    const a = new Date(p.toYear, p.toMonth, 1).getTime();
+    const b = new Date(latest.toYear, latest.toMonth, 1).getTime();
+    return a > b ? p : latest;
+  }, periods[0]);
+  return `From Period ${MONTHS_EN[from.fromMonth]} ${from.fromYear} until ${MONTHS_EN[to.toMonth]} ${to.toYear}`;
+}
+
 function filterPL(entries: JournalEntry[], p: ReportPeriod): JournalEntry[] {
   const from = new Date(p.fromYear, p.fromMonth, 1);
   const to   = new Date(p.toYear, p.toMonth + 1, 0, 23, 59, 59);
@@ -1563,7 +1579,11 @@ const PRESETS = [
 
 const PERIOD_COLORS = ["#2D7A4F", "#3E7CC8", "#7050C0"];
 
-function PeriodBar({ periods, onChange }: { periods: ReportPeriod[]; onChange: (p: ReportPeriod[]) => void }) {
+function PeriodBar({ periods, onChange, toolbar }: {
+  periods: ReportPeriod[];
+  onChange: (p: ReportPeriod[]) => void;
+  toolbar?: React.ReactNode;
+}) {
   const years = Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - 4 + i);
 
   function update(id: string, patch: Partial<ReportPeriod>) {
@@ -1575,62 +1595,513 @@ function PeriodBar({ periods, onChange }: { periods: ReportPeriod[]; onChange: (
     onChange([...periods, { id: Date.now().toString(), fromMonth: prev.fromMonth, fromYear: newYear, toMonth: prev.toMonth, toYear: newYear }]);
   }
   function removePeriod(id: string) { onChange(periods.filter(p => p.id !== id)); }
-  function applyPreset(id: string, preset: typeof PRESETS[0]) {
+  function applyPresetToAll(preset: typeof PRESETS[0]) {
     const vals = preset.fn();
-    onChange(periods.map(p => p.id === id ? { ...p, ...vals } : p));
+    onChange(periods.map((p, idx) => ({
+      ...p,
+      fromMonth: vals.fromMonth,
+      fromYear: vals.fromYear - idx,
+      toMonth: vals.toMonth,
+      toYear: vals.toYear - idx,
+    })));
+  }
+  function activePresetIdx(p: ReportPeriod) {
+    return PRESETS.findIndex(pr => {
+      const v = pr.fn();
+      return p.fromMonth === v.fromMonth && p.fromYear === v.fromYear
+          && p.toMonth === v.toMonth && p.toYear === v.toYear;
+    });
   }
 
-  const selStyle = (color: string): React.CSSProperties => ({
-    padding: "6px 8px", borderRadius: 6, border: `1px solid ${color}20`,
-    background: `${color}08`, color: "#1A2232", fontSize: 13,
+  const dateSel: React.CSSProperties = {
+    padding: "5px 7px", borderRadius: 6, border: "1px solid #E4E8F2",
+    background: "#FAFBFD", color: "#1A2232", fontSize: 13,
     fontFamily: "DM Sans, sans-serif", cursor: "pointer", appearance: "none" as const,
-  });
+  };
+  const baseActiveIdx = activePresetIdx(periods[0]);
 
   return (
-    <div style={{ ...card, marginBottom: 20, padding: "14px 18px" }}>
-      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10, alignItems: "flex-start" }}>
+    <div style={{
+      ...card,
+      marginBottom: 16,
+      padding: "10px 12px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" as const, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#1A2232", fontFamily: "DM Sans, sans-serif" }}>
+            Periode laporan
+          </span>
+          <select
+            value={baseActiveIdx >= 0 ? baseActiveIdx : ""}
+            onChange={e => { if (e.target.value !== "") applyPresetToAll(PRESETS[+e.target.value]); }}
+            style={{ ...dateSel, minWidth: 128, color: baseActiveIdx >= 0 ? PERIOD_COLORS[0] : "#697586", fontWeight: 600 }}
+          >
+            <option value="">Custom</option>
+            {PRESETS.map((pr, i) => <option key={pr.label} value={i}>{pr.label}</option>)}
+          </select>
+          {periods.length < 3 && (
+            <button onClick={addPeriod} style={{
+              padding: "6px 11px", borderRadius: 7, fontSize: 12,
+              border: "1px solid #D6DBE8", background: "transparent", color: "#697586",
+              cursor: "pointer", whiteSpace: "nowrap" as const,
+              fontFamily: "DM Sans, sans-serif",
+            }}>
+              + Bandingkan
+            </button>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" as const }}>
+          {toolbar}
+        </div>
+      </div>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))",
+        gap: 8,
+      }}>
         {periods.map((p, idx) => {
           const color = PERIOD_COLORS[idx] ?? "#697586";
           return (
-            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const, flex: 1, minWidth: 320 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color, fontFamily: "DM Sans, sans-serif", minWidth: 64 }}>
-                {periods.length > 1 ? `Periode ${idx + 1}` : "Periode"}
+            <div key={p.id} style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "7px 9px",
+              borderRadius: 8,
+              background: "#FAFBFD",
+              border: "1px solid #EEF1F6",
+              minWidth: 0,
+            }}>
+              <span style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color,
+                fontFamily: "DM Sans, sans-serif",
+                letterSpacing: "0.4px",
+                textTransform: "uppercase" as const,
+                whiteSpace: "nowrap" as const,
+                minWidth: 66,
+              }}>
+                Periode {idx + 1}
               </span>
-              <select value={p.fromMonth} onChange={e => update(p.id, { fromMonth: +e.target.value })} style={selStyle(color)}>
-                {MON_ABBR.map((m, i) => <option key={m} value={i}>{m}</option>)}
-              </select>
-              <select value={p.fromYear} onChange={e => update(p.id, { fromYear: +e.target.value })} style={selStyle(color)}>
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <span style={{ fontSize: 12, color: "#9AA5B4" }}>s/d</span>
-              <select value={p.toMonth} onChange={e => update(p.id, { toMonth: +e.target.value })} style={selStyle(color)}>
-                {MON_ABBR.map((m, i) => <option key={m} value={i}>{m}</option>)}
-              </select>
-              <select value={p.toYear} onChange={e => update(p.id, { toYear: +e.target.value })} style={selStyle(color)}>
-                {years.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              {/* Presets */}
-              <select defaultValue="" onChange={e => { if (e.target.value) { applyPreset(p.id, PRESETS[+e.target.value]); e.target.value = ""; } }} style={{ ...selStyle(color), color: "#697586", fontSize: 12, minWidth: 90 }}>
-                <option value="">Preset...</option>
-                {PRESETS.map((pr, i) => <option key={pr.label} value={i}>{pr.label}</option>)}
-              </select>
-              {idx > 0 && (
-                <button onClick={() => removePeriod(p.id)}
-                  style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid rgba(192,60,60,0.2)", background: "transparent", color: "#C03C3C", cursor: "pointer", fontSize: 12 }}>
-                  ×
-                </button>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, minWidth: 0 }}>
+                <select value={p.fromMonth} onChange={e => update(p.id, { fromMonth: +e.target.value })} style={dateSel}>
+                  {MON_ABBR.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                </select>
+                <select value={p.fromYear} onChange={e => update(p.id, { fromYear: +e.target.value })} style={dateSel}>
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <span style={{ fontSize: 12, color: "#9AA5B4" }}>→</span>
+                <select value={p.toMonth} onChange={e => update(p.id, { toMonth: +e.target.value })} style={dateSel}>
+                  {MON_ABBR.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                </select>
+                <select value={p.toYear} onChange={e => update(p.id, { toYear: +e.target.value })} style={dateSel}>
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                {idx > 0 && (
+                  <button onClick={() => removePeriod(p.id)} style={{
+                    padding: "5px 8px", borderRadius: 6, fontSize: 12, cursor: "pointer",
+                    border: "1px solid rgba(192,60,60,0.2)", background: "transparent", color: "#C03C3C",
+                  }}>×</button>
+                )}
+              </div>
             </div>
           );
         })}
-        {periods.length < 3 && (
-          <button onClick={addPeriod}
-            style={{ padding: "7px 14px", borderRadius: 6, border: "1px solid #D6DBE8", background: "transparent", color: "#697586", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" as const, alignSelf: "center" }}>
-            + Bandingkan
-          </button>
-        )}
       </div>
     </div>
+  );
+}
+
+function ExportPreviewModal({
+  title,
+  accent,
+  orientation,
+  monthly,
+  showViewRange = true,
+  viewFrom,
+  viewTo,
+  onOrientationChange,
+  onMonthlyChange,
+  onViewFromChange,
+  onViewToChange,
+  onClose,
+  onExport,
+  children,
+}: {
+  title: string;
+  accent: string;
+  orientation: "portrait" | "landscape";
+  monthly: boolean;
+  showViewRange?: boolean;
+  viewFrom: number;
+  viewTo: number;
+  onOrientationChange: (v: "portrait" | "landscape") => void;
+  onMonthlyChange: (v: boolean) => void;
+  onViewFromChange: (v: number) => void;
+  onViewToChange: (v: number) => void;
+  onClose: () => void;
+  onExport: () => void;
+  children: React.ReactNode;
+}) {
+  const [zoom, setZoom] = useState(1);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const setBoundedZoom = (next: number) => setZoom(Math.min(1.6, Math.max(0.55, next)));
+  const handleExport = () => {
+    const sheet = previewRef.current?.querySelector("[data-export-sheet='true']") as HTMLElement | null;
+    if (!sheet) return;
+    exportPreviewSheetToPdf(sheet, orientation);
+    onExport();
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999, background: "rgba(15,23,42,0.42)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 10,
+    }}>
+      <div style={{
+        width: "98vw", height: "96vh", overflow: "hidden",
+        background: "#FFFFFF", borderRadius: 14, boxShadow: "0 24px 70px rgba(15,23,42,0.24)",
+        border: "1px solid #E4E8F2", display: "flex", flexDirection: "column",
+      }}>
+        <div style={{ padding: "12px 18px", borderBottom: "1px solid #E4E8F2", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" as const }}>
+          <div style={{ minWidth: 230 }}>
+            <p style={{ fontSize: 15, fontWeight: 800, color: "#1A2232", fontFamily: "Geist, sans-serif" }}>{title}</p>
+            <p style={{ fontSize: 12, color: "#697586", marginTop: 2 }}>Preview data dan pilih format halaman sebelum final export.</p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const, marginLeft: "auto" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#1A2232", fontFamily: "DM Sans, sans-serif" }}>Format page</span>
+            {(["portrait", "landscape"] as const).map(mode => {
+              const active = orientation === mode;
+              return (
+                <button key={mode} onClick={() => onOrientationChange(mode)} style={{
+                  padding: "7px 12px", borderRadius: 8, border: `1px solid ${active ? accent : "#D6DBE8"}`,
+                  background: active ? `${accent}12` : "#FFFFFF", color: active ? accent : "#697586",
+                  cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "DM Sans, sans-serif",
+                }}>
+                  {mode === "portrait" ? "Portrait" : "Landscape"}
+                </button>
+              );
+            })}
+          </div>
+          <button onClick={() => onMonthlyChange(!monthly)} style={{
+            padding: "7px 12px",
+            borderRadius: 8,
+            border: `1px solid ${monthly ? accent : "#D6DBE8"}`,
+            background: monthly ? `${accent}12` : "#FFFFFF",
+            color: monthly ? accent : "#697586",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 700,
+            fontFamily: "DM Sans, sans-serif",
+            whiteSpace: "nowrap" as const,
+          }}>
+            Per Bulan
+          </button>
+          {showViewRange && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#1A2232", fontFamily: "DM Sans, sans-serif" }}>View</span>
+              <select value={viewFrom} onChange={e => onViewFromChange(+e.target.value)} style={{
+                padding: "7px 9px", borderRadius: 8, border: "1px solid #D6DBE8",
+                background: "#FFFFFF", color: "#697586", fontSize: 12, fontWeight: 700,
+                fontFamily: "DM Sans, sans-serif", cursor: "pointer",
+              }}>
+                {MON_ABBR.map((m, i) => <option key={m} value={i}>{m}</option>)}
+              </select>
+              <span style={{ fontSize: 12, color: "#9AA5B4" }}>s/d</span>
+              <select value={viewTo} onChange={e => onViewToChange(+e.target.value)} style={{
+                padding: "7px 9px", borderRadius: 8, border: "1px solid #D6DBE8",
+                background: "#FFFFFF", color: "#697586", fontSize: 12, fontWeight: 700,
+                fontFamily: "DM Sans, sans-serif", cursor: "pointer",
+              }}>
+                {MON_ABBR.map((m, i) => <option key={m} value={i}>{m}</option>)}
+              </select>
+            </div>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button onClick={() => setBoundedZoom(zoom - 0.1)} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #D6DBE8", background: "#FFFFFF", color: "#697586", cursor: "pointer", fontSize: 17, fontWeight: 800 }}>−</button>
+            <span style={{ minWidth: 48, textAlign: "center" as const, fontSize: 12, fontWeight: 800, color: "#1A2232", fontFamily: "DM Sans, sans-serif" }}>{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setBoundedZoom(zoom + 0.1)} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #D6DBE8", background: "#FFFFFF", color: "#697586", cursor: "pointer", fontSize: 17, fontWeight: 800 }}>+</button>
+            <button onClick={() => setZoom(1)} style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid #D6DBE8", background: "#FFFFFF", color: "#697586", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "DM Sans, sans-serif" }}>Reset</button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={handleExport} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: accent, color: "#FFFFFF", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+              Final Export PDF
+            </button>
+            <button onClick={onClose} style={{
+              width: 30, height: 30, borderRadius: 8, border: "1px solid #E4E8F2",
+              background: "#FFFFFF", color: "#697586", cursor: "pointer", fontSize: 18, lineHeight: 1,
+            }}>×</button>
+          </div>
+        </div>
+        <div style={{ flex: 1, padding: 18, overflow: "auto", background: "#F4F6FB" }}>
+          <div ref={previewRef} style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: "top left",
+            width: `${100 / zoom}%`,
+            minHeight: `${100 / zoom}%`,
+          }}>
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const reportFont = "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const reportMono = "'JetBrains Mono', 'SFMono-Regular', Consolas, monospace";
+const previewTh: React.CSSProperties = { padding: "8px 3px", fontSize: 11, color: "#0F3B68", fontWeight: 950, borderBottom: "1.5px solid #111827", textAlign: "right" as const, whiteSpace: "nowrap" as const, fontFamily: reportFont };
+const previewTd: React.CSSProperties = { padding: "6px 3px", fontSize: 10.5, color: "#111827", textAlign: "right" as const, whiteSpace: "nowrap" as const, fontFamily: reportMono, fontWeight: 650 };
+
+function exportPreviewSheetToPdf(sheet: HTMLElement, orientation: "portrait" | "landscape") {
+  const cloned = sheet.cloneNode(true) as HTMLElement;
+  cloned.style.margin = "0";
+  cloned.style.boxShadow = "none";
+  cloned.style.border = "none";
+
+  const sheetWidth = sheet.offsetWidth || (orientation === "landscape" ? 1560 : 920);
+  const sheetHeight = sheet.offsetHeight || (orientation === "landscape" ? 940 : 1380);
+  const pageWidthPx = orientation === "landscape" ? 1122 : 794;
+  const pageHeightPx = orientation === "landscape" ? 794 : 1122;
+  const scale = Math.min(1, pageWidthPx / sheetWidth, pageHeightPx / sheetHeight);
+  const pageHeightAtSheetScale = pageHeightPx / scale;
+  const pageSize = orientation === "landscape" ? "A4 landscape" : "A4 portrait";
+  cloned.style.minHeight = `${pageHeightAtSheetScale}px`;
+  cloned.style.height = `${pageHeightAtSheetScale}px`;
+  const frame = document.createElement("iframe");
+  frame.style.position = "fixed";
+  frame.style.right = "0";
+  frame.style.bottom = "0";
+  frame.style.width = "0";
+  frame.style.height = "0";
+  frame.style.border = "0";
+  frame.style.opacity = "0";
+  document.body.appendChild(frame);
+
+  const doc = frame.contentDocument || frame.contentWindow?.document;
+  if (!doc) {
+    document.body.removeChild(frame);
+    return;
+  }
+
+  doc.open();
+  doc.write(`<!doctype html>
+<html>
+  <head>
+    <title>Export PDF</title>
+    <style>
+      @page { size: ${pageSize}; margin: 0; }
+      * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      html, body { margin: 0; padding: 0; background: #ffffff; color: #111827; }
+      p { margin: 0; }
+      table { border-collapse: collapse; }
+      .print-page {
+        width: ${pageWidthPx}px;
+        height: ${pageHeightPx}px;
+        overflow: hidden;
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+      .print-sheet {
+        width: ${sheetWidth}px;
+        min-height: ${pageHeightAtSheetScale}px !important;
+        transform: scale(${scale});
+        transform-origin: top left;
+      }
+      @media print {
+        html, body { width: ${pageWidthPx}px; height: ${pageHeightPx}px; overflow: hidden; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="print-page"><div class="print-sheet">${cloned.outerHTML}</div></div>
+    <script>
+      window.onload = () => {
+        setTimeout(() => {
+          window.focus();
+          window.print();
+          setTimeout(() => window.parent.postMessage("renewa-print-done", "*"), 500);
+        }, 250);
+      };
+    </script>
+  </body>
+</html>`);
+  doc.close();
+
+  const cleanup = (event: MessageEvent) => {
+    if (event.data !== "renewa-print-done") return;
+    window.removeEventListener("message", cleanup);
+    setTimeout(() => frame.remove(), 500);
+  };
+  window.addEventListener("message", cleanup);
+  setTimeout(() => frame.contentWindow?.focus(), 100);
+}
+
+function PreviewSheet({
+  company,
+  title,
+  subtitle,
+  orientation,
+  children,
+}: {
+  company: string;
+  title: string;
+  subtitle: string;
+  orientation: "portrait" | "landscape";
+  children: React.ReactNode;
+}) {
+  const paperWidth = orientation === "landscape" ? 1560 : 920;
+  const minHeight = orientation === "landscape" ? 940 : 1380;
+
+  return (
+    <div data-export-sheet="true" style={{
+      width: paperWidth,
+      minHeight,
+      background: "#FFFFFF",
+      border: "1px solid #D6DBE8",
+      boxShadow: "0 10px 28px rgba(15,23,42,0.08)",
+      margin: "0 auto",
+      color: "#111827",
+      fontFamily: reportFont,
+      display: "flex",
+      flexDirection: "column",
+    }}>
+      <div style={{ height: 5, background: "linear-gradient(90deg, #2D7A4F, #5DD6A0)" }} />
+      <div style={{ padding: "34px 16px 26px", textAlign: "center" as const }}>
+        <p style={{ fontSize: 15, fontWeight: 900, fontFamily: reportMono, color: "#111827", letterSpacing: "0.2px" }}>{company}</p>
+        <p style={{ fontSize: 23, fontWeight: 950, color: "#A00032", fontFamily: reportFont, marginTop: 4, letterSpacing: "-0.2px" }}>{title}</p>
+        <p style={{ fontSize: 13, fontWeight: 750, fontFamily: reportMono, color: "#1F2937", marginTop: 2 }}>{subtitle}</p>
+      </div>
+      <div style={{ overflowX: "auto", padding: "0 30px 34px", flex: 1 }}>
+        {children}
+      </div>
+      <div
+        style={{
+          marginTop: "auto",
+          minHeight: 24,
+          padding: "0 30px 0",
+          background: "linear-gradient(90deg, #2D7A4F, #5DD6A0)",
+          color: "#FFFFFF",
+          fontSize: 10,
+          fontWeight: 750,
+          fontFamily: reportMono,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+        }}
+      >
+        Dibuat oleh Dashboard Renewa Asia
+      </div>
+    </div>
+  );
+}
+
+function PreviewAccountSection({
+  title,
+  groupLabel,
+  columns,
+  accountsByColumn,
+  totals,
+  totalLabel,
+}: {
+  title: string;
+  groupLabel?: string;
+  columns: string[];
+  accountsByColumn: LedgerAccount[][];
+  totals: number[];
+  totalLabel: string;
+}) {
+  const ids = [...new Set(accountsByColumn.flatMap(items => items.filter(a => a.balance !== 0).map(a => a.id)))];
+  const nameFor = (id: string) => accountsByColumn.flat().find(a => a.id === id)?.name ?? id;
+  const valueFor = (id: string, items: LedgerAccount[]) => items.find(a => a.id === id)?.balance ?? 0;
+
+  return (
+    <tbody>
+      {title && (
+        <>
+          <tr>
+            <td colSpan={columns.length + 2} style={{ padding: "15px 8px 6px", fontSize: 13, fontWeight: 950, color: "#0F172A", fontFamily: reportFont, letterSpacing: "0.25px", textTransform: "uppercase" as const }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 4, height: 14, borderRadius: 999, background: "#2D7A4F", display: "inline-block" }} />
+                {title}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={columns.length + 2} style={{ height: 1, padding: 0, background: "#EEF1F6" }} />
+          </tr>
+        </>
+      )}
+      {groupLabel && (
+        <tr>
+          <td colSpan={columns.length + 2} style={{ padding: "7px 8px 5px 22px", fontSize: 11.5, fontWeight: 900, color: "#111827", fontFamily: reportFont }}>
+            {groupLabel}
+          </td>
+        </tr>
+      )}
+      {ids.length === 0 ? (
+        <tr>
+          <td style={{ ...previewTd, textAlign: "left" as const, color: "#9AA5B4", fontFamily: reportFont, paddingLeft: groupLabel ? 34 : 16 }}>Tidak ada transaksi</td>
+          {columns.map(c => <td key={c} style={previewTd}>0</td>)}
+          <td style={previewTd}>0</td>
+        </tr>
+      ) : ids.map(id => {
+        const rowTotal = accountsByColumn.reduce((sum, items) => sum + valueFor(id, items), 0);
+        return (
+          <tr key={id}>
+            <td style={{ ...previewTd, textAlign: "left" as const, fontFamily: reportFont, paddingLeft: groupLabel ? 34 : 16, fontWeight: 700 }}>{nameFor(id)}</td>
+            {accountsByColumn.map((items, idx) => <td key={columns[idx]} style={previewTd}>{fmtM(valueFor(id, items)).replace("Rp ", "")}</td>)}
+            <td style={{ ...previewTd, fontWeight: 900 }}>{fmtM(rowTotal).replace("Rp ", "")}</td>
+          </tr>
+        );
+      })}
+      <tr>
+        <td style={{ ...previewTd, textAlign: "left" as const, fontFamily: reportFont, fontWeight: 950, borderTop: "1.5px solid #111827", borderBottom: "1px solid #D6DBE8", background: "#FAFBFD" }}>{totalLabel}</td>
+        {totals.map((total, idx) => <td key={columns[idx]} style={{ ...previewTd, fontWeight: 950, borderTop: "1.5px solid #111827", borderBottom: "1px solid #D6DBE8", background: "#FAFBFD" }}>{fmtM(total).replace("Rp ", "")}</td>)}
+        <td style={{ ...previewTd, fontWeight: 950, borderTop: "1.5px solid #111827", borderBottom: "1px solid #D6DBE8", background: "#FAFBFD" }}>{fmtM(totals.reduce((s, v) => s + v, 0)).replace("Rp ", "")}</td>
+      </tr>
+    </tbody>
+  );
+}
+
+function isOtherIncomeAccount(account: LedgerAccount): boolean {
+  const name = account.name.toLowerCase();
+  return /(other|lain|interest|bunga|bank|gain|keuntungan)/i.test(name);
+}
+
+function isOtherExpenseAccount(account: LedgerAccount): boolean {
+  const name = account.name.toLowerCase();
+  return /(other|lain|bank|tax|pajak|loan|pinjaman|provision|interest|bunga|admin fee)/i.test(name);
+}
+
+function PreviewTotalLine({
+  label,
+  columns,
+  values,
+}: {
+  label: string;
+  columns: string[];
+  values: number[];
+}) {
+  const grandTotal = values.reduce((sum, value) => sum + value, 0);
+  return (
+    <tbody>
+      <tr>
+        <td style={{ ...previewTd, textAlign: "left" as const, fontFamily: reportFont, fontWeight: 950, paddingTop: 15, paddingBottom: 9 }}>
+          {label}
+        </td>
+        {values.map((value, idx) => (
+          <td key={columns[idx]} style={{ ...previewTd, fontWeight: 950, color: value >= 0 ? "#2D7A4F" : "#C03C3C", paddingTop: 15, paddingBottom: 9 }}>
+            {fmtM(value).replace("Rp ", "")}
+          </td>
+        ))}
+        <td style={{ ...previewTd, fontWeight: 950, color: grandTotal >= 0 ? "#2D7A4F" : "#C03C3C", paddingTop: 15, paddingBottom: 9 }}>
+          {fmtM(grandTotal).replace("Rp ", "")}
+        </td>
+      </tr>
+    </tbody>
   );
 }
 
@@ -1670,6 +2141,9 @@ function ProfitLossView() {
   const [periods, setPeriods] = useState<ReportPeriod[]>([defaultPeriod()]);
   const [showMonthly, setShowMonthly] = useState(false);
   const [pdfOrientation, setPdfOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [previewFromMonth, setPreviewFromMonth] = useState(0);
+  const [previewToMonth, setPreviewToMonth] = useState(11);
 
   const refresh = useCallback(() => {
     apiGetChartAccounts().then(setAccounts).catch(() => setAccounts(getChartAccounts()));
@@ -1701,6 +2175,40 @@ function ProfitLossView() {
       return { month, year, label: multi ? `${MON_ABBR[month]}'${String(year).slice(-2)}` : MON_ABBR[month], ledger: ldg };
     })
   ) : null;
+  const normalizedPreviewFrom = Math.min(previewFromMonth, previewToMonth);
+  const normalizedPreviewTo = Math.max(previewFromMonth, previewToMonth);
+  const exportPeriods = showMonthly && monthlyPL
+    ? monthlyPL.flatMap((months, periodIdx) => months.map(m => {
+      const revenues = m.ledger.filter(a => a.type === "revenue");
+      const expenses = m.ledger.filter(a => a.type === "expense");
+      const totalRev = revenues.reduce((s, a) => s + a.balance, 0);
+      const totalExp = expenses.reduce((s, a) => s + a.balance, 0);
+      return {
+        label: periods.length > 1 ? `P${periodIdx + 1} ${MON_ABBR[m.month]} ${m.year}` : `${MON_ABBR[m.month]} ${m.year}`,
+        ledger: m.ledger,
+        revenues,
+        expenses,
+        totalRev,
+        totalExp,
+        net: totalRev - totalExp,
+      };
+    })).filter(p => {
+      const monthIdx = MON_ABBR.findIndex(m => p.label.includes(m));
+      return monthIdx >= normalizedPreviewFrom && monthIdx <= normalizedPreviewTo;
+    })
+    : perPeriod.map((d, i) => ({ label: periodLabel(periods[i]), ...d }));
+  const plColumns = exportPeriods.map(p => p.label);
+  const operatingRevenueByPeriod = exportPeriods.map(p => p.revenues.filter(a => !isOtherIncomeAccount(a)));
+  const otherIncomeByPeriod = exportPeriods.map(p => p.revenues.filter(isOtherIncomeAccount));
+  const operatingExpenseByPeriod = exportPeriods.map(p => p.expenses.filter(a => !isOtherExpenseAccount(a)));
+  const otherExpenseByPeriod = exportPeriods.map(p => p.expenses.filter(isOtherExpenseAccount));
+  const sumAccounts = (items: LedgerAccount[]) => items.reduce((sum, account) => sum + account.balance, 0);
+  const operatingRevenueTotals = operatingRevenueByPeriod.map(sumAccounts);
+  const otherIncomeTotals = otherIncomeByPeriod.map(sumAccounts);
+  const operatingExpenseTotals = operatingExpenseByPeriod.map(sumAccounts);
+  const otherExpenseTotals = otherExpenseByPeriod.map(sumAccounts);
+  const operatingRevenueValues = exportPeriods.map((_, idx) => operatingRevenueTotals[idx] - operatingExpenseTotals[idx]);
+  const otherIncomeExpenseValues = exportPeriods.map((_, idx) => otherIncomeTotals[idx] - otherExpenseTotals[idx]);
 
   const thStyle: React.CSSProperties = { padding: "8px 10px", fontSize: 11, color: "#697586", fontWeight: 600, fontFamily: "DM Sans, sans-serif", textAlign: "right" as const, whiteSpace: "nowrap" as const, borderBottom: "1px solid #E4E8F2" };
   const tdName: React.CSSProperties = { padding: "9px 14px", fontSize: 14, color: "#1A2232" };
@@ -1830,28 +2338,109 @@ function ProfitLossView() {
 
   return (
     <div>
-      {/* Period bar + toolbar */}
-      <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 4 }}>
-        <div style={{ flex: 1 }}><PeriodBar periods={periods} onChange={setPeriods} /></div>
-        <div style={{ display: "flex", gap: 6, alignSelf: "center" }}>
-          {/* Per Bulan toggle */}
-          <button onClick={() => setShowMonthly(m => !m)}
-            style={{ padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: `1px solid ${showMonthly ? "#2D7A4F" : "#D6DBE8"}`, background: showMonthly ? "rgba(45,122,79,0.07)" : "transparent", color: showMonthly ? "#2D7A4F" : "#697586", cursor: "pointer", whiteSpace: "nowrap" as const }}>
-            Per Bulan
-          </button>
-          {/* Orientation toggle */}
-          <button onClick={() => setPdfOrientation(o => o === "portrait" ? "landscape" : "portrait")}
-            title={`Mode: ${pdfOrientation}`}
-            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #D6DBE8", background: "transparent", color: "#697586", cursor: "pointer", fontSize: 12 }}>
-            {pdfOrientation === "portrait" ? "↕ Portrait" : "↔ Landscape"}
-          </button>
-          {/* Export */}
-          <button onClick={() => import("@/lib/pdfExport").then(m => m.exportProfitLoss(perPeriod[0].revenues, perPeriod[0].expenses, perPeriod[0].net, periodLabel(periods[0]), pdfOrientation))}
-            style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#2D7A4F", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const }}>
-            <BookOpen size={14} /> Export PDF
+      <PeriodBar periods={periods} onChange={setPeriods} toolbar={
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <button onClick={() => setExportOpen(true)}
+            style={{ padding: "6px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, background: "#2D7A4F", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const }}>
+            <BookOpen size={13} /> Export PDF
           </button>
         </div>
-      </div>
+      } />
+
+      {exportOpen && (
+        <ExportPreviewModal
+          title="Preview Export Laba Rugi"
+          accent="#2D7A4F"
+          orientation={pdfOrientation}
+          monthly={showMonthly}
+          showViewRange={showMonthly}
+          viewFrom={normalizedPreviewFrom}
+          viewTo={normalizedPreviewTo}
+          onOrientationChange={setPdfOrientation}
+          onMonthlyChange={setShowMonthly}
+          onViewFromChange={setPreviewFromMonth}
+          onViewToChange={setPreviewToMonth}
+          onClose={() => setExportOpen(false)}
+          onExport={() => setExportOpen(false)}
+        >
+          <PreviewSheet
+            company="PT. Renewa Green Energy"
+            title={showMonthly && exportPeriods.length === 1 ? "Profit/Loss (Monthly)" : "Profit/Loss (Multi Period)"}
+            subtitle={periodRangeSentence(periods)}
+            orientation={pdfOrientation}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" as const }}>
+              <colgroup>
+                <col style={{ width: 190 }} />
+                {exportPeriods.map(p => <col key={p.label} />)}
+                <col style={{ width: 150 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ ...previewTh, textAlign: "left" as const, minWidth: 180 }}>Description</th>
+                  {exportPeriods.map(p => <th key={p.label} style={previewTh}>{p.label}</th>)}
+                  <th style={previewTh}>Total</th>
+                </tr>
+              </thead>
+              <PreviewAccountSection
+                title="REVENUE"
+                groupLabel="Pendapatan Operasional"
+                columns={plColumns}
+                accountsByColumn={operatingRevenueByPeriod}
+                totals={operatingRevenueTotals}
+                totalLabel="Total REVENUE"
+              />
+              <PreviewAccountSection
+                title="OPERATING EXPENSES"
+                groupLabel="Beban Operasional"
+                columns={plColumns}
+                accountsByColumn={operatingExpenseByPeriod}
+                totals={operatingExpenseTotals}
+                totalLabel="Total OPERATING EXPENSES"
+              />
+              <PreviewTotalLine
+                label="OPERATING REVENUE"
+                columns={plColumns}
+                values={operatingRevenueValues}
+              />
+              <PreviewAccountSection
+                title="OTHER INCOME and EXPENSES"
+                groupLabel="Other Income"
+                columns={plColumns}
+                accountsByColumn={otherIncomeByPeriod}
+                totals={otherIncomeTotals}
+                totalLabel="Total Other Income"
+              />
+              <PreviewAccountSection
+                title=""
+                groupLabel="Other Expenses"
+                columns={plColumns}
+                accountsByColumn={otherExpenseByPeriod}
+                totals={otherExpenseTotals}
+                totalLabel="Total Other Expenses"
+              />
+              <PreviewTotalLine
+                label="Total OTHER INCOME and EXPENSES"
+                columns={plColumns}
+                values={otherIncomeExpenseValues}
+              />
+              <tbody>
+                <tr>
+                  <td style={{ ...previewTd, textAlign: "left" as const, fontFamily: "DM Sans, sans-serif", fontWeight: 900, paddingTop: 14 }}>NET PROFIT / LOSS</td>
+                  {exportPeriods.map(p => (
+                    <td key={p.label} style={{ ...previewTd, fontWeight: 900, color: p.net >= 0 ? "#2D7A4F" : "#C03C3C", paddingTop: 14 }}>
+                      {fmtM(p.net).replace("Rp ", "")}
+                    </td>
+                  ))}
+                  <td style={{ ...previewTd, fontWeight: 900, color: exportPeriods.reduce((s, p) => s + p.net, 0) >= 0 ? "#2D7A4F" : "#C03C3C", paddingTop: 14 }}>
+                    {fmtM(exportPeriods.reduce((s, p) => s + p.net, 0)).replace("Rp ", "")}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </PreviewSheet>
+        </ExportPreviewModal>
+      )}
 
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${periods.length}, 1fr)`, gap: 12, marginBottom: 20 }}>
@@ -1906,6 +2495,9 @@ function BalanceSheetView() {
   const [periods, setPeriods] = useState<ReportPeriod[]>([defaultPeriod()]);
   const [showMonthly, setShowMonthly] = useState(false);
   const [pdfOrientation, setPdfOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [previewFromMonth, setPreviewFromMonth] = useState(0);
+  const [previewToMonth, setPreviewToMonth] = useState(11);
 
   const refresh = useCallback(() => {
     apiGetChartAccounts().then(setAccounts).catch(() => setAccounts(getChartAccounts()));
@@ -1943,6 +2535,36 @@ function BalanceSheetView() {
       return { month, year, label: multi ? `${MON_ABBR[month]}'${String(year).slice(-2)}` : MON_ABBR[month], ledger: ldg };
     })
   ) : null;
+  const normalizedPreviewFrom = Math.min(previewFromMonth, previewToMonth);
+  const normalizedPreviewTo = Math.max(previewFromMonth, previewToMonth);
+  const exportPeriods = showMonthly && monthlyBS
+    ? monthlyBS.flatMap((months, periodIdx) => months.map(m => {
+      const assets      = m.ledger.filter(a => a.type === "asset");
+      const liabilities = m.ledger.filter(a => a.type === "liability");
+      const equities    = m.ledger.filter(a => a.type === "equity");
+      const net         = m.ledger.filter(a => a.type === "revenue").reduce((s, a) => s + a.balance, 0)
+                        - m.ledger.filter(a => a.type === "expense").reduce((s, a) => s + a.balance, 0);
+      const totalAsset  = assets.reduce((s, a) => s + a.balance, 0);
+      const totalLiab   = liabilities.reduce((s, a) => s + a.balance, 0);
+      const totalEq     = equities.reduce((s, a) => s + a.balance, 0);
+      const totalPassiva = totalLiab + totalEq + net;
+      return {
+        label: periods.length > 1 ? `P${periodIdx + 1} ${MON_ABBR[m.month]} ${m.year}` : `${MON_ABBR[m.month]} ${m.year}`,
+        assets,
+        liabilities,
+        equities,
+        net,
+        totalAsset,
+        totalLiab,
+        totalEq,
+        totalPassiva,
+        balanced: Math.abs(totalAsset - totalPassiva) < 0.001,
+      };
+    })).filter(p => {
+      const monthIdx = MON_ABBR.findIndex(m => p.label.includes(m));
+      return monthIdx >= normalizedPreviewFrom && monthIdx <= normalizedPreviewTo;
+    })
+    : perPeriod.map((d, i) => ({ label: periodLabel(periods[i]), ...d }));
 
   const thStyle: React.CSSProperties = { padding: "8px 10px", fontSize: 11, color: "#697586", fontWeight: 600, fontFamily: "DM Sans, sans-serif", textAlign: "right" as const, whiteSpace: "nowrap" as const, borderBottom: "1px solid #E4E8F2" };
   const tdName: React.CSSProperties = { padding: "9px 14px", fontSize: 14, color: "#1A2232" };
@@ -2071,25 +2693,92 @@ function BalanceSheetView() {
 
   return (
     <div>
-      {/* Period bar + toolbar */}
-      <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 4 }}>
-        <div style={{ flex: 1 }}><PeriodBar periods={periods} onChange={setPeriods} /></div>
-        <div style={{ display: "flex", gap: 6, alignSelf: "center" }}>
-          <button onClick={() => setShowMonthly(m => !m)}
-            style={{ padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: `1px solid ${showMonthly ? "#3E7CC8" : "#D6DBE8"}`, background: showMonthly ? "rgba(62,124,200,0.07)" : "transparent", color: showMonthly ? "#3E7CC8" : "#697586", cursor: "pointer", whiteSpace: "nowrap" as const }}>
-            Per Bulan
-          </button>
-          <button onClick={() => setPdfOrientation(o => o === "portrait" ? "landscape" : "portrait")}
-            title={`Mode: ${pdfOrientation}`}
-            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #D6DBE8", background: "transparent", color: "#697586", cursor: "pointer", fontSize: 12 }}>
-            {pdfOrientation === "portrait" ? "↕ Portrait" : "↔ Landscape"}
-          </button>
-          <button onClick={() => import("@/lib/pdfExport").then(m => m.exportBalanceSheet(perPeriod[0].assets, perPeriod[0].liabilities, perPeriod[0].equities, perPeriod[0].net, `${MON_ABBR[periods[0].toMonth]} ${periods[0].toYear}`, pdfOrientation))}
-            style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#3E7CC8", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const }}>
-            <BookOpen size={14} /> Export PDF
+      <PeriodBar periods={periods} onChange={setPeriods} toolbar={
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <button onClick={() => setExportOpen(true)}
+            style={{ padding: "6px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, background: "#3E7CC8", color: "#ffffff", border: "none", cursor: "pointer", fontFamily: "Geist, sans-serif", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const }}>
+            <BookOpen size={13} /> Export PDF
           </button>
         </div>
-      </div>
+      } />
+
+      {exportOpen && (
+        <ExportPreviewModal
+          title="Preview Export Neraca"
+          accent="#3E7CC8"
+          orientation={pdfOrientation}
+          monthly={showMonthly}
+          showViewRange={showMonthly}
+          viewFrom={normalizedPreviewFrom}
+          viewTo={normalizedPreviewTo}
+          onOrientationChange={setPdfOrientation}
+          onMonthlyChange={setShowMonthly}
+          onViewFromChange={setPreviewFromMonth}
+          onViewToChange={setPreviewToMonth}
+          onClose={() => setExportOpen(false)}
+          onExport={() => setExportOpen(false)}
+        >
+          <PreviewSheet
+            company="PT. Renewa Green Energy"
+            title={showMonthly && exportPeriods.length === 1 ? "Balance Sheet (Monthly)" : "Balance Sheet (Multi Period)"}
+            subtitle={periodRangeSentence(periods)}
+            orientation={pdfOrientation}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" as const }}>
+              <colgroup>
+                <col style={{ width: 190 }} />
+                {exportPeriods.map(p => <col key={p.label} />)}
+                <col style={{ width: 150 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ ...previewTh, textAlign: "left" as const, minWidth: 180 }}>Description</th>
+                  {exportPeriods.map(p => <th key={p.label} style={previewTh}>{p.label}</th>)}
+                  <th style={previewTh}>Total</th>
+                </tr>
+              </thead>
+              <PreviewAccountSection
+                title="ASSETS"
+                groupLabel="Aktiva"
+                columns={exportPeriods.map(p => p.label)}
+                accountsByColumn={exportPeriods.map(p => p.assets)}
+                totals={exportPeriods.map(p => p.totalAsset)}
+                totalLabel="Total ASSETS"
+              />
+              <PreviewAccountSection
+                title="LIABILITIES"
+                groupLabel="Kewajiban"
+                columns={exportPeriods.map(p => p.label)}
+                accountsByColumn={exportPeriods.map(p => p.liabilities)}
+                totals={exportPeriods.map(p => p.totalLiab)}
+                totalLabel="Total LIABILITIES"
+              />
+              <PreviewAccountSection
+                title="EQUITY"
+                groupLabel="Ekuitas"
+                columns={exportPeriods.map(p => p.label)}
+                accountsByColumn={exportPeriods.map(p => [
+                  ...p.equities,
+                  ...(p.net !== 0 ? [{ id: "__net__", code: "", name: p.net >= 0 ? "Laba Periode Berjalan" : "Rugi Periode Berjalan", type: "equity" as const, normalBalance: "credit" as const, balance: p.net, totalDebit: 0, totalCredit: 0 }] : []),
+                ])}
+                totals={exportPeriods.map(p => p.totalEq + p.net)}
+                totalLabel="Total EQUITY"
+              />
+              <tbody>
+                <tr>
+                  <td style={{ ...previewTd, textAlign: "left" as const, fontFamily: "DM Sans, sans-serif", fontWeight: 900, paddingTop: 14 }}>TOTAL LIABILITIES + EQUITY</td>
+                  {exportPeriods.map(p => (
+                    <td key={p.label} style={{ ...previewTd, fontWeight: 900, color: p.balanced ? "#2D7A4F" : "#C03C3C", paddingTop: 14 }}>
+                      {fmtM(p.totalPassiva).replace("Rp ", "")}
+                    </td>
+                  ))}
+                  <td style={{ ...previewTd, fontWeight: 900, paddingTop: 14 }}>{fmtM(exportPeriods.reduce((s, p) => s + p.totalPassiva, 0)).replace("Rp ", "")}</td>
+                </tr>
+              </tbody>
+            </table>
+          </PreviewSheet>
+        </ExportPreviewModal>
+      )}
 
       {/* Balance status chips */}
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" as const }}>
